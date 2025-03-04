@@ -13,6 +13,7 @@ from workflowai.core._logger import logger
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
 from workflowai.core.domain.task import AgentOutput
 from workflowai.core.domain.version_reference import VersionReference
+from workflowai.core.utils._pydantic import construct_model_recursive
 
 delimiter = re.compile(r'\}\n\ndata: \{"')
 
@@ -88,7 +89,7 @@ def build_retryable_wait(
 
 def tolerant_validator(m: type[AgentOutput]) -> OutputValidator[AgentOutput]:
     def _validator(data: dict[str, Any], has_tool_call_requests: bool) -> AgentOutput:  # noqa: ARG001
-        return m.model_construct(None, **data)
+        return construct_model_recursive(m, data)
 
     return _validator
 
@@ -97,7 +98,7 @@ def intolerant_validator(m: type[AgentOutput]) -> OutputValidator[AgentOutput]:
     def _validator(data: dict[str, Any], has_tool_call_requests: bool) -> AgentOutput:
         # When we have tool call requests, the output can be empty
         if has_tool_call_requests:
-            return m.model_construct(None, **data)
+            return tolerant_validator(m)(data, has_tool_call_requests)
 
         return m.model_validate(data)
 
