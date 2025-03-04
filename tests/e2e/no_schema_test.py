@@ -1,8 +1,9 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import workflowai
+from workflowai.core.client.agent import Agent
 
 
 class SummarizeTaskInput(BaseModel):
@@ -28,3 +29,31 @@ Lovelace Day, which promotes women in science and technology.""",
         use_cache="never",
     )
     assert summarized.summary_points
+
+
+async def test_same_schema():
+    class InputWithNullableList(BaseModel):
+        opt_list: Optional[list[str]] = None
+
+    class InputWithNonNullableList(BaseModel):
+        opt_list: list[str] = Field(default_factory=list)
+
+    agent1 = Agent(
+        agent_id="summarize",
+        input_cls=InputWithNullableList,
+        output_cls=SummarizeTaskOutput,
+        api=lambda: workflowai.shared_client.api,
+    )
+
+    schema_id1 = await agent1.register()
+
+    agent2 = Agent(
+        agent_id="summarize",
+        input_cls=InputWithNonNullableList,
+        output_cls=SummarizeTaskOutput,
+        api=lambda: workflowai.shared_client.api,
+    )
+
+    schema_id2 = await agent2.register()
+
+    assert schema_id1 == schema_id2
