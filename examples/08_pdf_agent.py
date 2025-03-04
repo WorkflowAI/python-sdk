@@ -7,11 +7,11 @@ from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableT
 import workflowai
 from workflowai import Run, WorkflowAIError
 from workflowai.core.domain.model import Model
-from workflowai.fields import File
+from workflowai.fields import PDF
 
 
 class PDFQuestionInput(BaseModel):
-    pdf: File = Field(description="The PDF document to analyze")
+    pdf: PDF = Field(description="The PDF document to analyze")
     question: str = Field(description="The question to answer about the PDF content")
 
 
@@ -49,9 +49,9 @@ async def run_pdf_answer():
 
         content = base64.b64encode(pdf_file.read()).decode("utf-8")
 
-    pdf = File(content_type="application/pdf", data=content)
+    pdf = PDF(content_type="application/pdf", data=content)
     # Could also pass the content via url
-    # pdf = File(url="https://example.com/sample.pdf")
+    # pdf = PDF(url="https://example.com/sample.pdf")
     question = "How many stocks were sold? What is the total amount in USD?"
 
     try:
