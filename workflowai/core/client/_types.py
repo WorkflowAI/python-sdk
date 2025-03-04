@@ -11,6 +11,7 @@ from typing import (
 from typing_extensions import Unpack
 
 from workflowai.core._common_types import AgentInputContra, AgentOutputCov, RunParams
+from workflowai.core.client._models import ModelInfo
 from workflowai.core.domain.run import Run
 from workflowai.core.domain.task import AgentInput, AgentOutput
 from workflowai.core.domain.tool_call import ToolCallResult
@@ -74,6 +75,8 @@ class _BaseProtocol(_BaseObject, Generic[AgentInputContra, AgentOutput], Protoco
         tool_results: Optional[Iterable[ToolCallResult]] = None,
         **kwargs: Unpack[RunParams[AgentOutput]],
     ): ...
+
+    async def list_models(self) -> list[ModelInfo]: ...
 
 
 class RunnableAgent(_BaseProtocol[AgentInputContra, AgentOutput], Protocol):
