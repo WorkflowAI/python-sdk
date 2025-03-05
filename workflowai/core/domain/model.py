@@ -34,6 +34,7 @@ class Model(str, Enum):
     O1_PREVIEW_2024_09_12 = "o1-preview-2024-09-12"
     O1_MINI_LATEST = "o1-mini-latest"
     O1_MINI_2024_09_12 = "o1-mini-2024-09-12"
+    GPT_45_PREVIEW_2025_02_27 = "gpt-4.5-preview-2025-02-27"
     GPT_4O_AUDIO_PREVIEW_2024_12_17 = "gpt-4o-audio-preview-2024-12-17"
     GPT_40_AUDIO_PREVIEW_2024_10_01 = "gpt-4o-audio-preview-2024-10-01"
     GPT_4_TURBO_2024_04_09 = "gpt-4-turbo-2024-04-09"

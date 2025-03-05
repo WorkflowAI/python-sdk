@@ -1,4 +1,3 @@
-import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any, Literal, Optional, TypeVar, Union, overload
@@ -6,13 +5,12 @@ from typing import Any, Literal, Optional, TypeVar, Union, overload
 import httpx
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
+from workflowai.core._logger import logger
 from workflowai.core.domain.errors import BaseError, ErrorResponse, WorkflowAIError
 
 # A type for return values
 _R = TypeVar("_R")
 _M = TypeVar("_M", bound=BaseModel)
-
-_logger = logging.getLogger("WorkflowAI")
 
 
 class APIClient:
@@ -154,7 +152,7 @@ class APIClient:
                 in_data = False
 
         if data:
-            _logger.warning("Data left after processing", extra={"data": data})
+            logger.warning("Data left after processing", extra={"data": data})
 
     async def stream(
         self,

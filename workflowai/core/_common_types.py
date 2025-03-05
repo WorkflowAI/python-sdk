@@ -19,7 +19,18 @@ AgentOutputCov = TypeVar("AgentOutputCov", bound=BaseModel, covariant=True)
 
 
 class OutputValidator(Protocol, Generic[AgentOutputCov]):
-    def __call__(self, data: dict[str, Any], has_tool_call_requests: bool) -> AgentOutputCov: ...
+    def __call__(self, data: dict[str, Any], partial: bool) -> AgentOutputCov:
+        """A way to convert a json object into an AgentOutput
+
+        Args:
+            data (dict[str, Any]): The json object to convert
+            partial (bool): Whether the json is partial, meaning that
+            it may not contain all the fields required by the AgentOutput model.
+
+        Returns:
+            AgentOutputCov: The converted AgentOutput
+        """
+        ...
 
 
 class VersionRunParams(TypedDict):

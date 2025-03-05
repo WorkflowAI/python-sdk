@@ -2,8 +2,14 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
+from pydantic import BaseModel
 
-from workflowai.core.client._utils import build_retryable_wait, global_default_version_reference, split_chunks
+from workflowai.core.client._utils import (
+    build_retryable_wait,
+    default_validator,
+    global_default_version_reference,
+    split_chunks,
+)
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
 
 
@@ -42,3 +48,24 @@ class TestBuildRetryableWait:
 def test_global_default_version_reference(env_var: str, expected: Any):
     with patch.dict("os.environ", {"WORKFLOWAI_DEFAULT_VERSION": env_var}):
         assert global_default_version_reference() == expected
+
+
+# Create a nested object with only required properties
+class Recipe(BaseModel):
+    class Ingredient(BaseModel):
+        name: str
+        quantity: int
+
+    ingredients: list[Ingredient]
+
+
+class TestValidator:
+    def test_tolerant_validator_nested_object(self):
+        validated = default_validator(Recipe)(
+            {
+                "ingredients": [{"name": "salt"}],
+            },
+            partial=True,
+        )
+        for ingredient in validated.ingredients:
+            assert isinstance(ingredient, Recipe.Ingredient)

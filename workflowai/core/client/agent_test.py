@@ -1,5 +1,6 @@
 import importlib.metadata
 import json
+import logging
 from unittest.mock import Mock, patch
 
 import httpx
@@ -119,70 +120,6 @@ class TestRun:
             "version": "production",
             "stream": False,
         }
-
-    async def test_stream(self, httpx_mock: HTTPXMock, agent: Agent[HelloTaskInput, HelloTaskOutput]):
-        httpx_mock.add_response(
-            stream=IteratorStream(
-                [
-                    b'data: {"id":"1","task_output":{"message":""}}\n\n',
-                    b'data: {"id":"1","task_output":{"message":"hel"}}\n\ndata: {"id":"1","task_output":{"message":"hello"}}\n\n',  # noqa: E501
-                    b'data: {"id":"1","task_output":{"message":"hello"},"version":{"properties":{"model":"gpt-4o","temperature":0.5}},"cost_usd":0.01,"duration_seconds":10.1}\n\n',  # noqa: E501
-                ],
-            ),
-        )
-
-        chunks = [chunk async for chunk in agent.stream(HelloTaskInput(name="Alice"))]
-
-        outputs = [chunk.output for chunk in chunks]
-        assert outputs == [
-            HelloTaskOutput(message=""),
-            HelloTaskOutput(message="hel"),
-            HelloTaskOutput(message="hello"),
-            HelloTaskOutput(message="hello"),
-        ]
-        last_message = chunks[-1]
-        assert isinstance(last_message, Run)
-        assert last_message.version
-        assert last_message.version.properties.model == "gpt-4o"
-        assert last_message.version.properties.temperature == 0.5
-        assert last_message.cost_usd == 0.01
-        assert last_message.duration_seconds == 10.1
-
-    async def test_stream_not_optional(
-        self,
-        httpx_mock: HTTPXMock,
-        agent_not_optional: Agent[HelloTaskInput, HelloTaskOutputNotOptional],
-    ):
-        # Checking that streaming works even with non optional fields
-        # The first two chunks are missing a required key but the last one has it
-        httpx_mock.add_response(
-            stream=IteratorStream(
-                [
-                    b'data: {"id":"1","task_output":{"message":""}}\n\n',
-                    b'data: {"id":"1","task_output":{"message":"hel"}}\n\ndata: {"id":"1","task_output":{"message":"hello"}}\n\n',  # noqa: E501
-                    b'data: {"id":"1","task_output":{"message":"hello", "another_field": "test"},"version":{"properties":{"model":"gpt-4o","temperature":0.5}},"cost_usd":0.01,"duration_seconds":10.1}\n\n',  # noqa: E501
-                ],
-            ),
-        )
-
-        chunks = [chunk async for chunk in agent_not_optional.stream(HelloTaskInput(name="Alice"))]
-
-        messages = [chunk.output.message for chunk in chunks]
-        assert messages == ["", "hel", "hello", "hello"]
-
-        for chunk in chunks[:-1]:
-            with pytest.raises(AttributeError):
-                # Since the field is not optional, it will raise an attribute error
-                assert chunk.output.another_field
-        assert chunks[-1].output.another_field == "test"
-
-        last_message = chunks[-1]
-        assert isinstance(last_message, Run)
-        assert last_message.version
-        assert last_message.version.properties.model == "gpt-4o"
-        assert last_message.version.properties.temperature == 0.5
-        assert last_message.cost_usd == 0.01
-        assert last_message.duration_seconds == 10.1
 
     async def test_run_with_env(self, httpx_mock: HTTPXMock, agent: Agent[HelloTaskInput, HelloTaskOutput]):
         httpx_mock.add_response(json=fixtures_json("task_run.json"))
@@ -449,558 +386,555 @@ class TestSanitizeVersion:
         }
 
 
-@pytest.mark.asyncio
-async def test_list_models(agent: Agent[HelloTaskInput, HelloTaskOutput], httpx_mock: HTTPXMock):
-    """Test that list_models correctly fetches and returns available models."""
-    # Mock the HTTP response instead of the API client method
-    httpx_mock.add_response(
-        url="http://localhost:8000/v1/_/agents/123/schemas/1/models",
-        json={
-            "items": [
-                {
-                    "id": "gpt-4",
-                    "name": "GPT-4",
-                    "icon_url": "https://example.com/gpt4.png",
-                    "modes": ["chat"],
-                    "is_not_supported_reason": None,
-                    "average_cost_per_run_usd": 0.01,
-                    "is_latest": True,
-                    "metadata": {
-                        "provider_name": "OpenAI",
-                        "price_per_input_token_usd": 0.0001,
-                        "price_per_output_token_usd": 0.0002,
-                        "release_date": "2024-01-01",
-                        "context_window_tokens": 128000,
-                        "quality_index": 0.95,
+class TestListModels:
+    async def test_list_models(self, agent: Agent[HelloTaskInput, HelloTaskOutput], httpx_mock: HTTPXMock):
+        """Test that list_models correctly fetches and returns available models."""
+        # Mock the HTTP response instead of the API client method
+        httpx_mock.add_response(
+            url="http://localhost:8000/v1/_/agents/123/schemas/1/models",
+            json={
+                "items": [
+                    {
+                        "id": "gpt-4",
+                        "name": "GPT-4",
+                        "icon_url": "https://example.com/gpt4.png",
+                        "modes": ["chat"],
+                        "is_not_supported_reason": None,
+                        "average_cost_per_run_usd": 0.01,
+                        "is_latest": True,
+                        "metadata": {
+                            "provider_name": "OpenAI",
+                            "price_per_input_token_usd": 0.0001,
+                            "price_per_output_token_usd": 0.0002,
+                            "release_date": "2024-01-01",
+                            "context_window_tokens": 128000,
+                            "quality_index": 0.95,
+                        },
+                        "is_default": True,
+                        "providers": ["openai"],
                     },
-                    "is_default": True,
-                    "providers": ["openai"],
-                },
-                {
-                    "id": "claude-3",
-                    "name": "Claude 3",
-                    "icon_url": "https://example.com/claude3.png",
-                    "modes": ["chat"],
-                    "is_not_supported_reason": None,
-                    "average_cost_per_run_usd": 0.015,
-                    "is_latest": True,
-                    "metadata": {
-                        "provider_name": "Anthropic",
-                        "price_per_input_token_usd": 0.00015,
-                        "price_per_output_token_usd": 0.00025,
-                        "release_date": "2024-03-01",
-                        "context_window_tokens": 200000,
-                        "quality_index": 0.98,
+                    {
+                        "id": "claude-3",
+                        "name": "Claude 3",
+                        "icon_url": "https://example.com/claude3.png",
+                        "modes": ["chat"],
+                        "is_not_supported_reason": None,
+                        "average_cost_per_run_usd": 0.015,
+                        "is_latest": True,
+                        "metadata": {
+                            "provider_name": "Anthropic",
+                            "price_per_input_token_usd": 0.00015,
+                            "price_per_output_token_usd": 0.00025,
+                            "release_date": "2024-03-01",
+                            "context_window_tokens": 200000,
+                            "quality_index": 0.98,
+                        },
+                        "is_default": False,
+                        "providers": ["anthropic"],
                     },
-                    "is_default": False,
-                    "providers": ["anthropic"],
-                },
-            ],
-            "count": 2,
-        },
-    )
+                ],
+                "count": 2,
+            },
+        )
 
-    # Call the method
-    models = await agent.list_models()
+        # Call the method
+        models = await agent.list_models()
 
-    # Verify the HTTP request was made correctly
-    request = httpx_mock.get_request()
-    assert request is not None, "Expected an HTTP request to be made"
-    assert request.method == "POST"
-    assert request.url == "http://localhost:8000/v1/_/agents/123/schemas/1/models"
-    assert json.loads(request.content) == {}
+        # Verify the HTTP request was made correctly
+        request = httpx_mock.get_request()
+        assert request is not None, "Expected an HTTP request to be made"
+        assert request.method == "POST"
+        assert request.url == "http://localhost:8000/v1/_/agents/123/schemas/1/models"
+        assert json.loads(request.content) == {}
 
-    # Verify we get back the full ModelInfo objects
-    assert len(models) == 2
-    assert isinstance(models[0], ModelInfo)
-    assert models[0].id == "gpt-4"
-    assert models[0].name == "GPT-4"
-    assert models[0].modes == ["chat"]
-    assert models[0].metadata is not None
-    assert models[0].metadata.provider_name == "OpenAI"
+        # Verify we get back the full ModelInfo objects
+        assert len(models) == 2
+        assert isinstance(models[0], ModelInfo)
+        assert models[0].id == "gpt-4"
+        assert models[0].name == "GPT-4"
+        assert models[0].modes == ["chat"]
+        assert models[0].metadata is not None
+        assert models[0].metadata.provider_name == "OpenAI"
 
-    assert isinstance(models[1], ModelInfo)
-    assert models[1].id == "claude-3"
-    assert models[1].name == "Claude 3"
-    assert models[1].modes == ["chat"]
-    assert models[1].metadata is not None
-    assert models[1].metadata.provider_name == "Anthropic"
+        assert isinstance(models[1], ModelInfo)
+        assert models[1].id == "claude-3"
+        assert models[1].name == "Claude 3"
+        assert models[1].modes == ["chat"]
+        assert models[1].metadata is not None
+        assert models[1].metadata.provider_name == "Anthropic"
 
-
-@pytest.mark.asyncio
-async def test_list_models_with_params_override(agent: Agent[HelloTaskInput, HelloTaskOutput], httpx_mock: HTTPXMock):
-    """Test that list_models correctly fetches and returns available models."""
-    # Mock the HTTP response instead of the API client method
-    httpx_mock.add_response(
-        url="http://localhost:8000/v1/_/agents/123/schemas/1/models",
-        json={
-            "items": [
-                {
-                    "id": "gpt-4",
-                    "name": "GPT-4",
-                    "icon_url": "https://example.com/gpt4.png",
-                    "modes": ["chat"],
-                    "is_not_supported_reason": None,
-                    "average_cost_per_run_usd": 0.01,
-                    "is_latest": True,
-                    "metadata": {
-                        "provider_name": "OpenAI",
-                        "price_per_input_token_usd": 0.0001,
-                        "price_per_output_token_usd": 0.0002,
-                        "release_date": "2024-01-01",
-                        "context_window_tokens": 128000,
-                        "quality_index": 0.95,
+    async def test_list_models_with_params_override(
+        self,
+        agent: Agent[HelloTaskInput, HelloTaskOutput],
+        httpx_mock: HTTPXMock,
+    ):
+        """Test that list_models correctly fetches and returns available models."""
+        # Mock the HTTP response instead of the API client method
+        httpx_mock.add_response(
+            url="http://localhost:8000/v1/_/agents/123/schemas/1/models",
+            json={
+                "items": [
+                    {
+                        "id": "gpt-4",
+                        "name": "GPT-4",
+                        "icon_url": "https://example.com/gpt4.png",
+                        "modes": ["chat"],
+                        "is_not_supported_reason": None,
+                        "average_cost_per_run_usd": 0.01,
+                        "is_latest": True,
+                        "metadata": {
+                            "provider_name": "OpenAI",
+                            "price_per_input_token_usd": 0.0001,
+                            "price_per_output_token_usd": 0.0002,
+                            "release_date": "2024-01-01",
+                            "context_window_tokens": 128000,
+                            "quality_index": 0.95,
+                        },
+                        "is_default": True,
+                        "providers": ["openai"],
                     },
-                    "is_default": True,
-                    "providers": ["openai"],
-                },
-                {
-                    "id": "claude-3",
-                    "name": "Claude 3",
-                    "icon_url": "https://example.com/claude3.png",
-                    "modes": ["chat"],
-                    "is_not_supported_reason": None,
-                    "average_cost_per_run_usd": 0.015,
-                    "is_latest": True,
-                    "metadata": {
-                        "provider_name": "Anthropic",
-                        "price_per_input_token_usd": 0.00015,
-                        "price_per_output_token_usd": 0.00025,
-                        "release_date": "2024-03-01",
-                        "context_window_tokens": 200000,
-                        "quality_index": 0.98,
+                    {
+                        "id": "claude-3",
+                        "name": "Claude 3",
+                        "icon_url": "https://example.com/claude3.png",
+                        "modes": ["chat"],
+                        "is_not_supported_reason": None,
+                        "average_cost_per_run_usd": 0.015,
+                        "is_latest": True,
+                        "metadata": {
+                            "provider_name": "Anthropic",
+                            "price_per_input_token_usd": 0.00015,
+                            "price_per_output_token_usd": 0.00025,
+                            "release_date": "2024-03-01",
+                            "context_window_tokens": 200000,
+                            "quality_index": 0.98,
+                        },
+                        "is_default": False,
+                        "providers": ["anthropic"],
                     },
-                    "is_default": False,
-                    "providers": ["anthropic"],
-                },
-            ],
-            "count": 2,
-        },
-    )
+                ],
+                "count": 2,
+            },
+        )
 
-    # Call the method
-    models = await agent.list_models(instructions="Some override instructions", requires_tools=True)
+        # Call the method
+        models = await agent.list_models(instructions="Some override instructions", requires_tools=True)
 
-    # Verify the HTTP request was made correctly
-    request = httpx_mock.get_request()
-    assert request is not None, "Expected an HTTP request to be made"
-    assert request.method == "POST"
-    assert request.url == "http://localhost:8000/v1/_/agents/123/schemas/1/models"
-    assert json.loads(request.content) == {
-        "instructions": "Some override instructions",
-        "requires_tools": True,
-    }
+        # Verify the HTTP request was made correctly
+        request = httpx_mock.get_request()
+        assert request is not None, "Expected an HTTP request to be made"
+        assert request.method == "POST"
+        assert request.url == "http://localhost:8000/v1/_/agents/123/schemas/1/models"
+        assert json.loads(request.content) == {
+            "instructions": "Some override instructions",
+            "requires_tools": True,
+        }
 
-    # Verify we get back the full ModelInfo objects
-    assert len(models) == 2
-    assert isinstance(models[0], ModelInfo)
-    assert models[0].id == "gpt-4"
-    assert models[0].name == "GPT-4"
-    assert models[0].modes == ["chat"]
-    assert models[0].metadata is not None
-    assert models[0].metadata.provider_name == "OpenAI"
+        # Verify we get back the full ModelInfo objects
+        assert len(models) == 2
+        assert isinstance(models[0], ModelInfo)
+        assert models[0].id == "gpt-4"
+        assert models[0].name == "GPT-4"
+        assert models[0].modes == ["chat"]
+        assert models[0].metadata is not None
+        assert models[0].metadata.provider_name == "OpenAI"
 
-    assert isinstance(models[1], ModelInfo)
-    assert models[1].id == "claude-3"
-    assert models[1].name == "Claude 3"
-    assert models[1].modes == ["chat"]
-    assert models[1].metadata is not None
-    assert models[1].metadata.provider_name == "Anthropic"
+        assert isinstance(models[1], ModelInfo)
+        assert models[1].id == "claude-3"
+        assert models[1].name == "Claude 3"
+        assert models[1].modes == ["chat"]
+        assert models[1].metadata is not None
+        assert models[1].metadata.provider_name == "Anthropic"
 
-
-@pytest.mark.asyncio
-async def test_list_models_with_params_override_and_agent_with_tools_and_instructions(
-    agent_with_tools_and_instructions: Agent[HelloTaskInput, HelloTaskOutput],
-    httpx_mock: HTTPXMock,
-):
-    """Test that list_models correctly fetches and returns available models."""
-    # Mock the HTTP response instead of the API client method
-    httpx_mock.add_response(
-        url="http://localhost:8000/v1/_/agents/123/schemas/1/models",
-        json={
-            "items": [
-                {
-                    "id": "gpt-4",
-                    "name": "GPT-4",
-                    "icon_url": "https://example.com/gpt4.png",
-                    "modes": ["chat"],
-                    "is_not_supported_reason": None,
-                    "average_cost_per_run_usd": 0.01,
-                    "is_latest": True,
-                    "metadata": {
-                        "provider_name": "OpenAI",
-                        "price_per_input_token_usd": 0.0001,
-                        "price_per_output_token_usd": 0.0002,
-                        "release_date": "2024-01-01",
-                        "context_window_tokens": 128000,
-                        "quality_index": 0.95,
+    async def test_list_models_with_params_override_and_agent_with_tools_and_instructions(
+        self,
+        agent_with_tools_and_instructions: Agent[HelloTaskInput, HelloTaskOutput],
+        httpx_mock: HTTPXMock,
+    ):
+        """Test that list_models correctly fetches and returns available models."""
+        # Mock the HTTP response instead of the API client method
+        httpx_mock.add_response(
+            url="http://localhost:8000/v1/_/agents/123/schemas/1/models",
+            json={
+                "items": [
+                    {
+                        "id": "gpt-4",
+                        "name": "GPT-4",
+                        "icon_url": "https://example.com/gpt4.png",
+                        "modes": ["chat"],
+                        "is_not_supported_reason": None,
+                        "average_cost_per_run_usd": 0.01,
+                        "is_latest": True,
+                        "metadata": {
+                            "provider_name": "OpenAI",
+                            "price_per_input_token_usd": 0.0001,
+                            "price_per_output_token_usd": 0.0002,
+                            "release_date": "2024-01-01",
+                            "context_window_tokens": 128000,
+                            "quality_index": 0.95,
+                        },
+                        "is_default": True,
+                        "providers": ["openai"],
                     },
-                    "is_default": True,
-                    "providers": ["openai"],
-                },
-                {
-                    "id": "claude-3",
-                    "name": "Claude 3",
-                    "icon_url": "https://example.com/claude3.png",
-                    "modes": ["chat"],
-                    "is_not_supported_reason": None,
-                    "average_cost_per_run_usd": 0.015,
-                    "is_latest": True,
-                    "metadata": {
-                        "provider_name": "Anthropic",
-                        "price_per_input_token_usd": 0.00015,
-                        "price_per_output_token_usd": 0.00025,
-                        "release_date": "2024-03-01",
-                        "context_window_tokens": 200000,
-                        "quality_index": 0.98,
+                    {
+                        "id": "claude-3",
+                        "name": "Claude 3",
+                        "icon_url": "https://example.com/claude3.png",
+                        "modes": ["chat"],
+                        "is_not_supported_reason": None,
+                        "average_cost_per_run_usd": 0.015,
+                        "is_latest": True,
+                        "metadata": {
+                            "provider_name": "Anthropic",
+                            "price_per_input_token_usd": 0.00015,
+                            "price_per_output_token_usd": 0.00025,
+                            "release_date": "2024-03-01",
+                            "context_window_tokens": 200000,
+                            "quality_index": 0.98,
+                        },
+                        "is_default": False,
+                        "providers": ["anthropic"],
                     },
-                    "is_default": False,
-                    "providers": ["anthropic"],
-                },
-            ],
-            "count": 2,
-        },
-    )
+                ],
+                "count": 2,
+            },
+        )
 
-    # Call the method
-    models = await agent_with_tools_and_instructions.list_models(
-        instructions="Some override instructions",
-        requires_tools=False,
-    )
+        # Call the method
+        models = await agent_with_tools_and_instructions.list_models(
+            instructions="Some override instructions",
+            requires_tools=False,
+        )
 
-    # Verify the HTTP request was made correctly
-    request = httpx_mock.get_request()
-    assert request is not None, "Expected an HTTP request to be made"
-    assert request.method == "POST"
-    assert request.url == "http://localhost:8000/v1/_/agents/123/schemas/1/models"
-    assert json.loads(request.content) == {
-        "instructions": "Some override instructions",
-        "requires_tools": False,
-    }
+        # Verify the HTTP request was made correctly
+        request = httpx_mock.get_request()
+        assert request is not None, "Expected an HTTP request to be made"
+        assert request.method == "POST"
+        assert request.url == "http://localhost:8000/v1/_/agents/123/schemas/1/models"
+        assert json.loads(request.content) == {
+            "instructions": "Some override instructions",
+            "requires_tools": False,
+        }
 
-    # Verify we get back the full ModelInfo objects
-    assert len(models) == 2
-    assert isinstance(models[0], ModelInfo)
-    assert models[0].id == "gpt-4"
-    assert models[0].name == "GPT-4"
-    assert models[0].modes == ["chat"]
-    assert models[0].metadata is not None
-    assert models[0].metadata.provider_name == "OpenAI"
+        # Verify we get back the full ModelInfo objects
+        assert len(models) == 2
+        assert isinstance(models[0], ModelInfo)
+        assert models[0].id == "gpt-4"
+        assert models[0].name == "GPT-4"
+        assert models[0].modes == ["chat"]
+        assert models[0].metadata is not None
+        assert models[0].metadata.provider_name == "OpenAI"
 
-    assert isinstance(models[1], ModelInfo)
-    assert models[1].id == "claude-3"
-    assert models[1].name == "Claude 3"
-    assert models[1].modes == ["chat"]
-    assert models[1].metadata is not None
-    assert models[1].metadata.provider_name == "Anthropic"
+        assert isinstance(models[1], ModelInfo)
+        assert models[1].id == "claude-3"
+        assert models[1].name == "Claude 3"
+        assert models[1].modes == ["chat"]
+        assert models[1].metadata is not None
+        assert models[1].metadata.provider_name == "Anthropic"
 
+    async def test_list_models_registers_if_needed(
+        self,
+        agent_no_schema: Agent[HelloTaskInput, HelloTaskOutput],
+        httpx_mock: HTTPXMock,
+    ):
+        """Test that list_models registers the agent if it hasn't been registered yet."""
+        # Mock the registration response
+        httpx_mock.add_response(
+            url="http://localhost:8000/v1/_/agents",
+            json={"id": "123", "schema_id": 2},
+        )
 
-@pytest.mark.asyncio
-async def test_list_models_registers_if_needed(
-    agent_no_schema: Agent[HelloTaskInput, HelloTaskOutput],
-    httpx_mock: HTTPXMock,
-):
-    """Test that list_models registers the agent if it hasn't been registered yet."""
-    # Mock the registration response
-    httpx_mock.add_response(
-        url="http://localhost:8000/v1/_/agents",
-        json={"id": "123", "schema_id": 2},
-    )
-
-    # Mock the models response with the new structure
-    httpx_mock.add_response(
-        url="http://localhost:8000/v1/_/agents/123/schemas/2/models",
-        json={
-            "items": [
-                {
-                    "id": "gpt-4",
-                    "name": "GPT-4",
-                    "icon_url": "https://example.com/gpt4.png",
-                    "modes": ["chat"],
-                    "is_not_supported_reason": None,
-                    "average_cost_per_run_usd": 0.01,
-                    "is_latest": True,
-                    "metadata": {
-                        "provider_name": "OpenAI",
-                        "price_per_input_token_usd": 0.0001,
-                        "price_per_output_token_usd": 0.0002,
-                        "release_date": "2024-01-01",
-                        "context_window_tokens": 128000,
-                        "quality_index": 0.95,
+        # Mock the models response with the new structure
+        httpx_mock.add_response(
+            url="http://localhost:8000/v1/_/agents/123/schemas/2/models",
+            json={
+                "items": [
+                    {
+                        "id": "gpt-4",
+                        "name": "GPT-4",
+                        "icon_url": "https://example.com/gpt4.png",
+                        "modes": ["chat"],
+                        "is_not_supported_reason": None,
+                        "average_cost_per_run_usd": 0.01,
+                        "is_latest": True,
+                        "metadata": {
+                            "provider_name": "OpenAI",
+                            "price_per_input_token_usd": 0.0001,
+                            "price_per_output_token_usd": 0.0002,
+                            "release_date": "2024-01-01",
+                            "context_window_tokens": 128000,
+                            "quality_index": 0.95,
+                        },
+                        "is_default": True,
+                        "providers": ["openai"],
                     },
-                    "is_default": True,
-                    "providers": ["openai"],
-                },
-            ],
-            "count": 1,
-        },
-    )
+                ],
+                "count": 1,
+            },
+        )
 
-    # Call the method
-    models = await agent_no_schema.list_models()
+        # Call the method
+        models = await agent_no_schema.list_models()
 
-    # Verify both API calls were made
-    reqs = httpx_mock.get_requests()
-    assert len(reqs) == 2
-    assert reqs[0].url == "http://localhost:8000/v1/_/agents"
-    assert reqs[1].method == "POST"
-    assert reqs[1].url == "http://localhost:8000/v1/_/agents/123/schemas/2/models"
-    assert json.loads(reqs[1].content) == {}
+        # Verify both API calls were made
+        reqs = httpx_mock.get_requests()
+        assert len(reqs) == 2
+        assert reqs[0].url == "http://localhost:8000/v1/_/agents"
+        assert reqs[1].method == "POST"
+        assert reqs[1].url == "http://localhost:8000/v1/_/agents/123/schemas/2/models"
+        assert json.loads(reqs[1].content) == {}
 
-    # Verify we get back the full ModelInfo object
-    assert len(models) == 1
-    assert isinstance(models[0], ModelInfo)
-    assert models[0].id == "gpt-4"
-    assert models[0].name == "GPT-4"
-    assert models[0].modes == ["chat"]
-    assert models[0].metadata is not None
-    assert models[0].metadata.provider_name == "OpenAI"
+        # Verify we get back the full ModelInfo object
+        assert len(models) == 1
+        assert isinstance(models[0], ModelInfo)
+        assert models[0].id == "gpt-4"
+        assert models[0].name == "GPT-4"
+        assert models[0].modes == ["chat"]
+        assert models[0].metadata is not None
+        assert models[0].metadata.provider_name == "OpenAI"
 
-
-@pytest.mark.asyncio
-async def test_list_models_with_instructions(
-    agent_with_instructions: Agent[HelloTaskInput, HelloTaskOutput],
-    httpx_mock: HTTPXMock,
-):
-    """Test that list_models correctly fetches and returns available models."""
-    # Mock the HTTP response instead of the API client method
-    httpx_mock.add_response(
-        method="POST",
-        url="http://localhost:8000/v1/_/agents/123/schemas/1/models",
-        json={
-            "items": [
-                {
-                    "id": "gpt-4",
-                    "name": "GPT-4",
-                    "icon_url": "https://example.com/gpt4.png",
-                    "modes": ["chat"],
-                    "is_not_supported_reason": None,
-                    "average_cost_per_run_usd": 0.01,
-                    "is_latest": True,
-                    "metadata": {
-                        "provider_name": "OpenAI",
-                        "price_per_input_token_usd": 0.0001,
-                        "price_per_output_token_usd": 0.0002,
-                        "release_date": "2024-01-01",
-                        "context_window_tokens": 128000,
-                        "quality_index": 0.95,
+    async def test_list_models_with_instructions(
+        self,
+        agent_with_instructions: Agent[HelloTaskInput, HelloTaskOutput],
+        httpx_mock: HTTPXMock,
+    ):
+        """Test that list_models correctly fetches and returns available models."""
+        # Mock the HTTP response instead of the API client method
+        httpx_mock.add_response(
+            method="POST",
+            url="http://localhost:8000/v1/_/agents/123/schemas/1/models",
+            json={
+                "items": [
+                    {
+                        "id": "gpt-4",
+                        "name": "GPT-4",
+                        "icon_url": "https://example.com/gpt4.png",
+                        "modes": ["chat"],
+                        "is_not_supported_reason": None,
+                        "average_cost_per_run_usd": 0.01,
+                        "is_latest": True,
+                        "metadata": {
+                            "provider_name": "OpenAI",
+                            "price_per_input_token_usd": 0.0001,
+                            "price_per_output_token_usd": 0.0002,
+                            "release_date": "2024-01-01",
+                            "context_window_tokens": 128000,
+                            "quality_index": 0.95,
+                        },
+                        "is_default": True,
+                        "providers": ["openai"],
                     },
-                    "is_default": True,
-                    "providers": ["openai"],
-                },
-                {
-                    "id": "claude-3",
-                    "name": "Claude 3",
-                    "icon_url": "https://example.com/claude3.png",
-                    "modes": ["chat"],
-                    "is_not_supported_reason": None,
-                    "average_cost_per_run_usd": 0.015,
-                    "is_latest": True,
-                    "metadata": {
-                        "provider_name": "Anthropic",
-                        "price_per_input_token_usd": 0.00015,
-                        "price_per_output_token_usd": 0.00025,
-                        "release_date": "2024-03-01",
-                        "context_window_tokens": 200000,
-                        "quality_index": 0.98,
+                    {
+                        "id": "claude-3",
+                        "name": "Claude 3",
+                        "icon_url": "https://example.com/claude3.png",
+                        "modes": ["chat"],
+                        "is_not_supported_reason": None,
+                        "average_cost_per_run_usd": 0.015,
+                        "is_latest": True,
+                        "metadata": {
+                            "provider_name": "Anthropic",
+                            "price_per_input_token_usd": 0.00015,
+                            "price_per_output_token_usd": 0.00025,
+                            "release_date": "2024-03-01",
+                            "context_window_tokens": 200000,
+                            "quality_index": 0.98,
+                        },
+                        "is_default": False,
+                        "providers": ["anthropic"],
                     },
-                    "is_default": False,
-                    "providers": ["anthropic"],
-                },
-            ],
-            "count": 2,
-        },
-    )
+                ],
+                "count": 2,
+            },
+        )
 
-    # Call the method
-    models = await agent_with_instructions.list_models()
+        # Call the method
+        models = await agent_with_instructions.list_models()
 
-    # Verify the HTTP request was made correctly
-    request = httpx_mock.get_request()
-    assert request is not None, "Expected an HTTP request to be made"
-    assert request.method == "POST"
-    assert request.url == "http://localhost:8000/v1/_/agents/123/schemas/1/models"
-    assert json.loads(request.content) == {"instructions": "Some instructions"}
+        # Verify the HTTP request was made correctly
+        request = httpx_mock.get_request()
+        assert request is not None, "Expected an HTTP request to be made"
+        assert request.method == "POST"
+        assert request.url == "http://localhost:8000/v1/_/agents/123/schemas/1/models"
+        assert json.loads(request.content) == {"instructions": "Some instructions"}
 
-    # Verify we get back the full ModelInfo objects
-    assert len(models) == 2
-    assert isinstance(models[0], ModelInfo)
-    assert models[0].id == "gpt-4"
-    assert models[0].name == "GPT-4"
-    assert models[0].modes == ["chat"]
-    assert models[0].metadata is not None
-    assert models[0].metadata.provider_name == "OpenAI"
+        # Verify we get back the full ModelInfo objects
+        assert len(models) == 2
+        assert isinstance(models[0], ModelInfo)
+        assert models[0].id == "gpt-4"
+        assert models[0].name == "GPT-4"
+        assert models[0].modes == ["chat"]
+        assert models[0].metadata is not None
+        assert models[0].metadata.provider_name == "OpenAI"
 
-    assert isinstance(models[1], ModelInfo)
-    assert models[1].id == "claude-3"
-    assert models[1].name == "Claude 3"
-    assert models[1].modes == ["chat"]
-    assert models[1].metadata is not None
-    assert models[1].metadata.provider_name == "Anthropic"
+        assert isinstance(models[1], ModelInfo)
+        assert models[1].id == "claude-3"
+        assert models[1].name == "Claude 3"
+        assert models[1].modes == ["chat"]
+        assert models[1].metadata is not None
+        assert models[1].metadata.provider_name == "Anthropic"
 
-
-@pytest.mark.asyncio
-async def test_list_models_with_tools(
-    agent_with_tools: Agent[HelloTaskInput, HelloTaskOutput],
-    httpx_mock: HTTPXMock,
-):
-    """Test that list_models correctly fetches and returns available models."""
-    # Mock the HTTP response instead of the API client method
-    httpx_mock.add_response(
-        method="POST",
-        url="http://localhost:8000/v1/_/agents/123/schemas/1/models",
-        json={
-            "items": [
-                {
-                    "id": "gpt-4",
-                    "name": "GPT-4",
-                    "icon_url": "https://example.com/gpt4.png",
-                    "modes": ["chat"],
-                    "is_not_supported_reason": None,
-                    "average_cost_per_run_usd": 0.01,
-                    "is_latest": True,
-                    "metadata": {
-                        "provider_name": "OpenAI",
-                        "price_per_input_token_usd": 0.0001,
-                        "price_per_output_token_usd": 0.0002,
-                        "release_date": "2024-01-01",
-                        "context_window_tokens": 128000,
-                        "quality_index": 0.95,
+    async def test_list_models_with_tools(
+        self,
+        agent_with_tools: Agent[HelloTaskInput, HelloTaskOutput],
+        httpx_mock: HTTPXMock,
+    ):
+        """Test that list_models correctly fetches and returns available models."""
+        # Mock the HTTP response instead of the API client method
+        httpx_mock.add_response(
+            method="POST",
+            url="http://localhost:8000/v1/_/agents/123/schemas/1/models",
+            json={
+                "items": [
+                    {
+                        "id": "gpt-4",
+                        "name": "GPT-4",
+                        "icon_url": "https://example.com/gpt4.png",
+                        "modes": ["chat"],
+                        "is_not_supported_reason": None,
+                        "average_cost_per_run_usd": 0.01,
+                        "is_latest": True,
+                        "metadata": {
+                            "provider_name": "OpenAI",
+                            "price_per_input_token_usd": 0.0001,
+                            "price_per_output_token_usd": 0.0002,
+                            "release_date": "2024-01-01",
+                            "context_window_tokens": 128000,
+                            "quality_index": 0.95,
+                        },
+                        "is_default": True,
+                        "providers": ["openai"],
                     },
-                    "is_default": True,
-                    "providers": ["openai"],
-                },
-                {
-                    "id": "claude-3",
-                    "name": "Claude 3",
-                    "icon_url": "https://example.com/claude3.png",
-                    "modes": ["chat"],
-                    "is_not_supported_reason": None,
-                    "average_cost_per_run_usd": 0.015,
-                    "is_latest": True,
-                    "metadata": {
-                        "provider_name": "Anthropic",
-                        "price_per_input_token_usd": 0.00015,
-                        "price_per_output_token_usd": 0.00025,
-                        "release_date": "2024-03-01",
-                        "context_window_tokens": 200000,
-                        "quality_index": 0.98,
+                    {
+                        "id": "claude-3",
+                        "name": "Claude 3",
+                        "icon_url": "https://example.com/claude3.png",
+                        "modes": ["chat"],
+                        "is_not_supported_reason": None,
+                        "average_cost_per_run_usd": 0.015,
+                        "is_latest": True,
+                        "metadata": {
+                            "provider_name": "Anthropic",
+                            "price_per_input_token_usd": 0.00015,
+                            "price_per_output_token_usd": 0.00025,
+                            "release_date": "2024-03-01",
+                            "context_window_tokens": 200000,
+                            "quality_index": 0.98,
+                        },
+                        "is_default": False,
+                        "providers": ["anthropic"],
                     },
-                    "is_default": False,
-                    "providers": ["anthropic"],
-                },
-            ],
-            "count": 2,
-        },
-    )
+                ],
+                "count": 2,
+            },
+        )
 
-    # Call the method
-    models = await agent_with_tools.list_models()
+        # Call the method
+        models = await agent_with_tools.list_models()
 
-    # Verify the HTTP request was made correctly
-    request = httpx_mock.get_request()
-    assert request is not None, "Expected an HTTP request to be made"
-    assert request.method == "POST"
-    assert request.url == "http://localhost:8000/v1/_/agents/123/schemas/1/models"
-    assert json.loads(request.content) == {"requires_tools": True}
+        # Verify the HTTP request was made correctly
+        request = httpx_mock.get_request()
+        assert request is not None, "Expected an HTTP request to be made"
+        assert request.method == "POST"
+        assert request.url == "http://localhost:8000/v1/_/agents/123/schemas/1/models"
+        assert json.loads(request.content) == {"requires_tools": True}
 
-    # Verify we get back the full ModelInfo objects
-    assert len(models) == 2
-    assert isinstance(models[0], ModelInfo)
-    assert models[0].id == "gpt-4"
-    assert models[0].name == "GPT-4"
-    assert models[0].modes == ["chat"]
-    assert models[0].metadata is not None
-    assert models[0].metadata.provider_name == "OpenAI"
+        # Verify we get back the full ModelInfo objects
+        assert len(models) == 2
+        assert isinstance(models[0], ModelInfo)
+        assert models[0].id == "gpt-4"
+        assert models[0].name == "GPT-4"
+        assert models[0].modes == ["chat"]
+        assert models[0].metadata is not None
+        assert models[0].metadata.provider_name == "OpenAI"
 
-    assert isinstance(models[1], ModelInfo)
-    assert models[1].id == "claude-3"
-    assert models[1].name == "Claude 3"
-    assert models[1].modes == ["chat"]
-    assert models[1].metadata is not None
-    assert models[1].metadata.provider_name == "Anthropic"
+        assert isinstance(models[1], ModelInfo)
+        assert models[1].id == "claude-3"
+        assert models[1].name == "Claude 3"
+        assert models[1].modes == ["chat"]
+        assert models[1].metadata is not None
+        assert models[1].metadata.provider_name == "Anthropic"
 
-
-@pytest.mark.asyncio
-async def test_list_models_with_instructions_and_tools(
-    agent_with_tools_and_instructions: Agent[HelloTaskInput, HelloTaskOutput],
-    httpx_mock: HTTPXMock,
-):
-    """Test that list_models correctly fetches and returns available models."""
-    # Mock the HTTP response instead of the API client method
-    httpx_mock.add_response(
-        method="POST",
-        url="http://localhost:8000/v1/_/agents/123/schemas/1/models",
-        json={
-            "items": [
-                {
-                    "id": "gpt-4",
-                    "name": "GPT-4",
-                    "icon_url": "https://example.com/gpt4.png",
-                    "modes": ["chat"],
-                    "is_not_supported_reason": None,
-                    "average_cost_per_run_usd": 0.01,
-                    "is_latest": True,
-                    "metadata": {
-                        "provider_name": "OpenAI",
-                        "price_per_input_token_usd": 0.0001,
-                        "price_per_output_token_usd": 0.0002,
-                        "release_date": "2024-01-01",
-                        "context_window_tokens": 128000,
-                        "quality_index": 0.95,
+    async def test_list_models_with_instructions_and_tools(
+        self,
+        agent_with_tools_and_instructions: Agent[HelloTaskInput, HelloTaskOutput],
+        httpx_mock: HTTPXMock,
+    ):
+        """Test that list_models correctly fetches and returns available models."""
+        # Mock the HTTP response instead of the API client method
+        httpx_mock.add_response(
+            method="POST",
+            url="http://localhost:8000/v1/_/agents/123/schemas/1/models",
+            json={
+                "items": [
+                    {
+                        "id": "gpt-4",
+                        "name": "GPT-4",
+                        "icon_url": "https://example.com/gpt4.png",
+                        "modes": ["chat"],
+                        "is_not_supported_reason": None,
+                        "average_cost_per_run_usd": 0.01,
+                        "is_latest": True,
+                        "metadata": {
+                            "provider_name": "OpenAI",
+                            "price_per_input_token_usd": 0.0001,
+                            "price_per_output_token_usd": 0.0002,
+                            "release_date": "2024-01-01",
+                            "context_window_tokens": 128000,
+                            "quality_index": 0.95,
+                        },
+                        "is_default": True,
+                        "providers": ["openai"],
                     },
-                    "is_default": True,
-                    "providers": ["openai"],
-                },
-                {
-                    "id": "claude-3",
-                    "name": "Claude 3",
-                    "icon_url": "https://example.com/claude3.png",
-                    "modes": ["chat"],
-                    "is_not_supported_reason": None,
-                    "average_cost_per_run_usd": 0.015,
-                    "is_latest": True,
-                    "metadata": {
-                        "provider_name": "Anthropic",
-                        "price_per_input_token_usd": 0.00015,
-                        "price_per_output_token_usd": 0.00025,
-                        "release_date": "2024-03-01",
-                        "context_window_tokens": 200000,
-                        "quality_index": 0.98,
+                    {
+                        "id": "claude-3",
+                        "name": "Claude 3",
+                        "icon_url": "https://example.com/claude3.png",
+                        "modes": ["chat"],
+                        "is_not_supported_reason": None,
+                        "average_cost_per_run_usd": 0.015,
+                        "is_latest": True,
+                        "metadata": {
+                            "provider_name": "Anthropic",
+                            "price_per_input_token_usd": 0.00015,
+                            "price_per_output_token_usd": 0.00025,
+                            "release_date": "2024-03-01",
+                            "context_window_tokens": 200000,
+                            "quality_index": 0.98,
+                        },
+                        "is_default": False,
+                        "providers": ["anthropic"],
                     },
-                    "is_default": False,
-                    "providers": ["anthropic"],
-                },
-            ],
-            "count": 2,
-        },
-    )
+                ],
+                "count": 2,
+            },
+        )
 
-    # Call the method
-    models = await agent_with_tools_and_instructions.list_models()
+        # Call the method
+        models = await agent_with_tools_and_instructions.list_models()
 
-    # Verify the HTTP request was made correctly
-    request = httpx_mock.get_request()
-    assert request is not None, "Expected an HTTP request to be made"
-    assert request.method == "POST"
-    assert request.url == "http://localhost:8000/v1/_/agents/123/schemas/1/models"
-    assert json.loads(request.content) == {"instructions": "Some instructions", "requires_tools": True}
+        # Verify the HTTP request was made correctly
+        request = httpx_mock.get_request()
+        assert request is not None, "Expected an HTTP request to be made"
+        assert request.method == "POST"
+        assert request.url == "http://localhost:8000/v1/_/agents/123/schemas/1/models"
+        assert json.loads(request.content) == {"instructions": "Some instructions", "requires_tools": True}
 
-    # Verify we get back the full ModelInfo objects
-    assert len(models) == 2
-    assert isinstance(models[0], ModelInfo)
-    assert models[0].id == "gpt-4"
-    assert models[0].name == "GPT-4"
-    assert models[0].modes == ["chat"]
-    assert models[0].metadata is not None
-    assert models[0].metadata.provider_name == "OpenAI"
+        # Verify we get back the full ModelInfo objects
+        assert len(models) == 2
+        assert isinstance(models[0], ModelInfo)
+        assert models[0].id == "gpt-4"
+        assert models[0].name == "GPT-4"
+        assert models[0].modes == ["chat"]
+        assert models[0].metadata is not None
+        assert models[0].metadata.provider_name == "OpenAI"
 
-    assert isinstance(models[1], ModelInfo)
-    assert models[1].id == "claude-3"
-    assert models[1].name == "Claude 3"
-    assert models[1].modes == ["chat"]
-    assert models[1].metadata is not None
-    assert models[1].metadata.provider_name == "Anthropic"
+        assert isinstance(models[1], ModelInfo)
+        assert models[1].id == "claude-3"
+        assert models[1].name == "Claude 3"
+        assert models[1].modes == ["chat"]
+        assert models[1].metadata is not None
+        assert models[1].metadata.provider_name == "Anthropic"
 
 
 class TestFetchCompletions:
@@ -1029,3 +963,118 @@ class TestFetchCompletions:
                 ),
             ),
         ]
+
+
+class TestStream:
+    async def test_stream(self, httpx_mock: HTTPXMock, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        httpx_mock.add_response(
+            stream=IteratorStream(
+                [
+                    b'data: {"id":"1","task_output":{"message":""}}\n\n',
+                    b'data: {"id":"1","task_output":{"message":"hel"}}\n\ndata: {"id":"1","task_output":{"message":"hello"}}\n\n',  # noqa: E501
+                    b'data: {"id":"1","task_output":{"message":"hello"},"version":{"properties":{"model":"gpt-4o","temperature":0.5}},"cost_usd":0.01,"duration_seconds":10.1}\n\n',  # noqa: E501
+                ],
+            ),
+        )
+
+        chunks = [chunk async for chunk in agent.stream(HelloTaskInput(name="Alice"))]
+
+        outputs = [chunk.output for chunk in chunks]
+        assert outputs == [
+            HelloTaskOutput(message=""),
+            HelloTaskOutput(message="hel"),
+            HelloTaskOutput(message="hello"),
+            HelloTaskOutput(message="hello"),
+        ]
+        last_message = chunks[-1]
+        assert isinstance(last_message, Run)
+        assert last_message.version
+        assert last_message.version.properties.model == "gpt-4o"
+        assert last_message.version.properties.temperature == 0.5
+        assert last_message.cost_usd == 0.01
+        assert last_message.duration_seconds == 10.1
+
+    async def test_stream_not_optional(
+        self,
+        httpx_mock: HTTPXMock,
+        agent_not_optional: Agent[HelloTaskInput, HelloTaskOutputNotOptional],
+    ):
+        # Checking that streaming works even with non optional fields
+        # The first two chunks are missing a required key but the last one has it
+        httpx_mock.add_response(
+            stream=IteratorStream(
+                [
+                    b'data: {"id":"1","task_output":{"message":""}}\n\n',
+                    b'data: {"id":"1","task_output":{"message":"hel"}}\n\ndata: {"id":"1","task_output":{"message":"hello"}}\n\n',  # noqa: E501
+                    b'data: {"id":"1","task_output":{"message":"hello", "another_field": "test"},"version":{"properties":{"model":"gpt-4o","temperature":0.5}},"cost_usd":0.01,"duration_seconds":10.1}\n\n',  # noqa: E501
+                ],
+            ),
+        )
+
+        chunks = [chunk async for chunk in agent_not_optional.stream(HelloTaskInput(name="Alice"))]
+
+        messages = [chunk.output.message for chunk in chunks]
+        assert messages == ["", "hel", "hello", "hello"]
+
+        for chunk in chunks[:-1]:
+            assert chunk.output.another_field == ""
+        assert chunks[-1].output.another_field == "test"
+
+        last_message = chunks[-1]
+        assert isinstance(last_message, Run)
+        assert last_message.version
+        assert last_message.version.properties.model == "gpt-4o"
+        assert last_message.version.properties.temperature == 0.5
+        assert last_message.cost_usd == 0.01
+        assert last_message.duration_seconds == 10.1
+
+    async def test_stream_validation_errors(
+        self,
+        agent: Agent[HelloTaskInput, HelloTaskOutput],
+        httpx_mock: HTTPXMock,
+        caplog: pytest.LogCaptureFixture,
+    ):
+        """Test that validation errors are properly skipped and logged during streaming"""
+        httpx_mock.add_response(
+            stream=IteratorStream(
+                [
+                    b'data: {"id":"1","task_output":{"message":""}}\n\n',
+                    # Middle chunk is passed
+                    b'data: {"id":"1","task_output":{"message":1}}\n\n',
+                    b'data: {"id":"1","task_output":{"message":"hello"}}\n\n',
+                ],
+            ),
+        )
+
+        with caplog.at_level(logging.DEBUG):
+            chunks = [chunk async for chunk in agent.stream(HelloTaskInput(name="Alice"))]
+
+        assert len(chunks) == 2
+        assert chunks[0].output.message == ""
+        assert chunks[1].output.message == "hello"
+        logs = [record for record in caplog.records if "Client side validation error in stream" in record.message]
+
+        assert len(logs) == 1
+        assert logs[0].levelname == "DEBUG"
+        assert logs[0].exc_info is not None
+
+    async def test_stream_validation_final_error(
+        self,
+        agent: Agent[HelloTaskInput, HelloTaskOutput],
+        httpx_mock: HTTPXMock,
+    ):
+        """Check that we properly raise an error if the final payload fails to validate."""
+        httpx_mock.add_response(
+            stream=IteratorStream(
+                [
+                    # Stream a single chunk that fails to validate
+                    b'data: {"id":"1","task_output":{"message":1}}\n\n',
+                ],
+            ),
+        )
+
+        with pytest.raises(WorkflowAIError) as e:
+            _ = [c async for c in agent.stream(HelloTaskInput(name="Alice"))]
+
+        assert e.value.partial_output == {"message": 1}
+        assert e.value.run_id == "1"

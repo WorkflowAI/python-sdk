@@ -5,7 +5,7 @@ from pydantic import BaseModel, ValidationError
 
 from tests.utils import fixture_text
 from workflowai.core.client._models import RunResponse
-from workflowai.core.client._utils import intolerant_validator, tolerant_validator
+from workflowai.core.client._utils import default_validator
 from workflowai.core.domain.run import Run
 from workflowai.core.domain.tool_call import ToolCallRequest
 
@@ -41,29 +41,30 @@ class TestRunResponseToDomain:
         with pytest.raises(ValidationError):  # sanity
             _TaskOutput.model_validate({"a": 1})
 
-        parsed = chunk.to_domain(task_id="1", task_schema_id=1, validator=tolerant_validator(_TaskOutput))
+        parsed = chunk.to_domain(task_id="1", task_schema_id=1, validator=default_validator(_TaskOutput))
         assert isinstance(parsed, Run)
         assert parsed.output.a == 1
         # b is not defined
-        with pytest.raises(AttributeError):
-            assert parsed.output.b
+
+        assert parsed.output.b == ""
 
     def test_no_version_optional(self):
         chunk = RunResponse.model_validate_json('{"id": "1", "task_output": {"a": 1}}')
         assert chunk
 
-        parsed = chunk.to_domain(task_id="1", task_schema_id=1, validator=tolerant_validator(_TaskOutputOpt))
+        parsed = chunk.to_domain(task_id="1", task_schema_id=1, validator=default_validator(_TaskOutputOpt))
         assert isinstance(parsed, Run)
         assert parsed.output.a == 1
         assert parsed.output.b is None
 
     def test_with_version(self):
+        """Full output is validated since the duration is passed and there are no tool calls"""
         chunk = RunResponse.model_validate_json(
             '{"id": "1", "task_output": {"a": 1, "b": "test"}, "cost_usd": 0.1, "duration_seconds": 1, "version": {"properties": {"a": 1, "b": "test"}}}',  # noqa: E501
         )
         assert chunk
 
-        parsed = chunk.to_domain(task_id="1", task_schema_id=1, validator=tolerant_validator(_TaskOutput))
+        parsed = chunk.to_domain(task_id="1", task_schema_id=1, validator=default_validator(_TaskOutput))
         assert isinstance(parsed, Run)
         assert parsed.output.a == 1
         assert parsed.output.b == "test"
@@ -73,17 +74,19 @@ class TestRunResponseToDomain:
 
     def test_with_version_validation_fails(self):
         chunk = RunResponse.model_validate_json(
-            '{"id": "1", "task_output": {"a": 1}, "version": {"properties": {"a": 1, "b": "test"}}}',
+            """{"id": "1", "task_output": {"a": 1},
+            "version": {"properties": {"a": 1, "b": "test"}}, "duration_seconds": 1}""",
         )
         with pytest.raises(ValidationError):
-            chunk.to_domain(task_id="1", task_schema_id=1, validator=intolerant_validator(_TaskOutput))
+            chunk.to_domain(task_id="1", task_schema_id=1, validator=default_validator(_TaskOutput))
 
     def test_with_tool_calls(self):
         chunk = RunResponse.model_validate_json(
-            '{"id": "1", "task_output": {}, "tool_call_requests": [{"id": "1", "name": "test", "input": {"a": 1}}]}',
+            """{"id": "1", "task_output": {},
+            "tool_call_requests": [{"id": "1", "name": "test", "input": {"a": 1}}], "duration_seconds": 1}""",
         )
         assert chunk
 
-        parsed = chunk.to_domain(task_id="1", task_schema_id=1, validator=tolerant_validator(_TaskOutput))
+        parsed = chunk.to_domain(task_id="1", task_schema_id=1, validator=default_validator(_TaskOutput))
         assert isinstance(parsed, Run)
         assert parsed.tool_call_requests == [ToolCallRequest(id="1", name="test", input={"a": 1})]
