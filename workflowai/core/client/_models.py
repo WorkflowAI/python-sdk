@@ -138,7 +138,7 @@ class RunResponse(BaseModel):
     ) -> Run[AgentOutput]:
         # We do partial validation if either:
         # - there are tool call requests, which means that the output can be empty
-        # - the run has not yet finished, for exmaple when streaming, in which case the duration_seconds is None
+        # - the run has not yet finished, for example when streaming, in which case the duration_seconds is None
         if partial is None:
             partial = bool(self.tool_call_requests) or self.duration_seconds is None
         return Run(
