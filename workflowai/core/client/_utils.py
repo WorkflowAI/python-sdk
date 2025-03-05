@@ -13,7 +13,7 @@ from workflowai.core._logger import logger
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
 from workflowai.core.domain.task import AgentOutput
 from workflowai.core.domain.version_reference import VersionReference
-from workflowai.core.utils._pydantic import construct_model_recursive
+from workflowai.core.utils._pydantic import partial_model
 
 delimiter = re.compile(r'\}\n\ndata: \{"')
 
@@ -88,16 +88,11 @@ def build_retryable_wait(
 
 
 def default_validator(m: type[AgentOutput]) -> OutputValidator[AgentOutput]:
-    def _validator(data: dict[str, Any], partial: bool) -> AgentOutput:
-        # When we have tool call requests, the output can be empty
-        if partial:
-            try:
-                return construct_model_recursive(m, data)
-            except Exception:  # noqa: BLE001
-                logger.warning("Failed to validate partial data: %s", data)
-                return m.model_construct(None, **data)
+    partial_cls = partial_model(m)
 
-        return m.model_validate(data)
+    def _validator(data: dict[str, Any], partial: bool) -> AgentOutput:
+        model_cls = partial_cls if partial else m
+        return model_cls.model_validate(data)
 
     return _validator
 

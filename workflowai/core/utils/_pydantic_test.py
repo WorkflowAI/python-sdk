@@ -1,30 +1,68 @@
-from typing import Any
+from typing import Any, Optional
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ValidationError
 
-from workflowai.core.utils._pydantic import construct_model_recursive
+from workflowai.core.utils._pydantic import partial_model
 
 
-class TestConstructModelRecursive:
+class TestPartialModel:
+    def test_partial_model_equals(self):
+        class SimpleModel(BaseModel):
+            name: str
+
+        partial = partial_model(SimpleModel)
+        assert partial.model_validate({"name": "John"}) == SimpleModel(name="John")
+
+        assert SimpleModel(name="John") == partial.model_validate({"name": "John"})
+
     def test_simple_model(self):
         class SimpleModel(BaseModel):
             name1: str
             name2: str
+            name3: int
+            name4: float
+            bla: dict[str, Any]
+            opt: Optional[str]
 
-        constructed = construct_model_recursive(SimpleModel, {"name1": "John"})
+        constructed = partial_model(SimpleModel).model_validate({"name1": "John"})
         assert isinstance(constructed, SimpleModel)
         assert constructed.name1 == "John"
-        with pytest.raises(AttributeError):
-            _ = constructed.name2
+        assert constructed.name2 == ""
+        assert constructed.name3 == 0
+        assert constructed.name4 == 0.0
+        assert constructed.bla == {}
+        assert constructed.opt is None
+
+        # Check that we do not raise on an empty payload
+        partial_model(SimpleModel).model_validate({})
+
+        # Check that we do raise when a type is wrong
+        with pytest.raises(ValidationError):
+            partial_model(SimpleModel).model_validate({"name1": 1, "name2": "2"})
+
+    def test_with_some_optional_fields(self):
+        class SomeOptionalFields(BaseModel):
+            name1: str
+            name2: str = "blibly"
+            list1: list[str] = Field(default_factory=lambda: ["1"])
+
+        constructed = partial_model(SomeOptionalFields).model_validate({})
+        assert isinstance(constructed, SomeOptionalFields)
+        assert constructed.name1 == ""
+        assert constructed.name2 == "blibly"
+        assert constructed.list1 == ["1"]
 
     def test_list_of_strings(self):
         class ListOfStrings(BaseModel):
             strings: list[str]
 
-        constructed = construct_model_recursive(ListOfStrings, {"strings": ["a", "b"]})
+        constructed = partial_model(ListOfStrings).model_validate({"strings": ["a", "b"]})
         assert isinstance(constructed, ListOfStrings)
         assert constructed.strings == ["a", "b"]
+
+        # Check that we do not raise on an empty payload
+        partial_model(ListOfStrings).model_validate({})
 
     @pytest.mark.parametrize(
         "payload",
@@ -44,30 +82,13 @@ class TestConstructModelRecursive:
             field1: str
             nested: NestedModel
 
-        constructed = construct_model_recursive(OuterModel, payload)
+        constructed = partial_model(OuterModel).model_validate(payload)
         assert isinstance(constructed, OuterModel), "constructed is not an instance of OuterModel"
-        if "field1" in payload:
-            assert isinstance(constructed.field1, str), "field1 is not a string"
-        else:
-            with pytest.raises(AttributeError):
-                _ = constructed.field1
+        assert constructed.field1 == payload.get("field1", "")
+        assert isinstance(constructed.nested, NestedModel), "nested is not an instance of NestedModel"
 
-        if "nested" in payload:
-            assert isinstance(constructed.nested, NestedModel), "nested is not an instance of NestedModel"
-            if "name" in payload["nested"]:
-                assert isinstance(constructed.nested.name, str)
-            else:
-                with pytest.raises(AttributeError):
-                    _ = constructed.nested.name
-
-            if "field2" in payload["nested"]:
-                assert isinstance(constructed.nested.field2, str)
-            else:
-                with pytest.raises(AttributeError):
-                    _ = constructed.nested.field2
-        else:
-            with pytest.raises(AttributeError):
-                _ = constructed.nested
+        assert constructed.nested.name == payload.get("nested", {}).get("name", "")
+        assert constructed.nested.field2 == payload.get("nested", {}).get("field2", "")
 
     def test_list_of_models(self):
         class NestedModel(BaseModel):
@@ -77,8 +98,7 @@ class TestConstructModelRecursive:
         class ListOfModels(BaseModel):
             models: list[NestedModel]
 
-        constructed = construct_model_recursive(
-            ListOfModels,
+        constructed = partial_model(ListOfModels).model_validate(
             {"models": [{"name": "hello", "field2": "world"}, {"name": "hello"}]},
         )
         assert isinstance(constructed, ListOfModels)
@@ -97,8 +117,7 @@ class TestConstructModelRecursive:
         class SetOfModels(BaseModel):
             models: set[NestedModel]
 
-        constructed = construct_model_recursive(
-            SetOfModels,
+        constructed = partial_model(SetOfModels).model_validate(
             {"models": [{"name": "hello", "field2": "world"}, {"name": "hello"}]},
         )
         assert isinstance(constructed, SetOfModels)
@@ -113,11 +132,24 @@ class TestConstructModelRecursive:
         class DictOfModels(BaseModel):
             models: dict[str, NestedModel]
 
-        constructed = construct_model_recursive(
-            DictOfModels,
+        constructed = partial_model(DictOfModels).model_validate(
             {"models": {"hello": {"name": "hello", "field2": "world"}, "hello2": {"name": "hello"}}},
         )
         assert isinstance(constructed, DictOfModels)
         assert isinstance(constructed.models, dict)
         assert isinstance(constructed.models["hello"], NestedModel)
         assert isinstance(constructed.models["hello2"], NestedModel)
+
+    def test_with_aliases(self):
+        class AliasModel(BaseModel):
+            message: str = Field(alias="message_alias")
+            aliased_ser: str = Field(serialization_alias="aliased_ser_alias")
+            aliased_val: str = Field(validation_alias="aliased_val_alias")
+
+        partial = partial_model(AliasModel)
+
+        payload = {"message_alias": "hello", "aliased_ser": "world", "aliased_val_alias": "!"}
+        v1 = AliasModel.model_validate(payload)
+        v2 = partial.model_validate(payload)
+
+        assert v1 == v2

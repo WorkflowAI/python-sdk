@@ -45,8 +45,8 @@ class TestRunResponseToDomain:
         assert isinstance(parsed, Run)
         assert parsed.output.a == 1
         # b is not defined
-        with pytest.raises(AttributeError):
-            assert parsed.output.b
+
+        assert parsed.output.b == ""
 
     def test_no_version_optional(self):
         chunk = RunResponse.model_validate_json('{"id": "1", "task_output": {"a": 1}}')

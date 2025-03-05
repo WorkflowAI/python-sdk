@@ -171,9 +171,7 @@ class TestRun:
         assert messages == ["", "hel", "hello", "hello"]
 
         for chunk in chunks[:-1]:
-            with pytest.raises(AttributeError):
-                # Since the field is not optional, it will raise an attribute error
-                assert chunk.output.another_field
+            assert chunk.output.another_field == ""
         assert chunks[-1].output.another_field == "test"
 
         last_message = chunks[-1]

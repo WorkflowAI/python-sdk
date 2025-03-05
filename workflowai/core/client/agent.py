@@ -3,7 +3,7 @@ from asyncio.log import logger
 from collections.abc import Awaitable, Callable, Iterable
 from typing import Any, Generic, NamedTuple, Optional, Union, cast
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from typing_extensions import Unpack
 
 from workflowai.core._common_types import BaseRunParams, OutputValidator, VersionRunParams
@@ -101,6 +101,8 @@ class Agent(Generic[AgentInput, AgentOutput]):
         self.version = version
         self._api = (lambda: api) if isinstance(api, APIClient) else api
         self._tools = self.build_tools(tools) if tools else None
+
+        self._default_validator = default_validator(output_cls)
 
     @classmethod
     def build_tools(cls, tools: Iterable[Callable[..., Any]]):
@@ -362,7 +364,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
             Run[AgentOutput]: The task run object.
         """
         prepared_run = await self._prepare_run(agent_input, stream=False, **kwargs)
-        validator, new_kwargs = self._sanitize_validator(kwargs, default_validator(self.output_cls))
+        validator, new_kwargs = self._sanitize_validator(kwargs, self._default_validator)
 
         last_error = None
         while prepared_run.should_retry():
@@ -418,10 +420,12 @@ class Agent(Generic[AgentInput, AgentOutput]):
             AsyncIterator[Run[AgentOutput]]: An async iterator yielding task run objects.
         """
         prepared_run = await self._prepare_run(agent_input, stream=True, **kwargs)
-        validator, new_kwargs = self._sanitize_validator(kwargs, default_validator(self.output_cls))
+        validator, new_kwargs = self._sanitize_validator(kwargs, self._default_validator)
 
         while prepared_run.should_retry():
             try:
+                # Will store the error if the final payload fails to validate
+                final_error: Optional[Exception] = None
                 chunk: Optional[RunResponse] = None
                 async for chunk in self.api.stream(
                     method="POST",
@@ -430,15 +434,32 @@ class Agent(Generic[AgentInput, AgentOutput]):
                     returns=RunResponse,
                     run=True,
                 ):
-                    yield await self._build_run(
-                        chunk,
-                        prepared_run.schema_id,
-                        validator,
-                        current_iteration=0,
-                        **new_kwargs,
-                    )
+                    try:
+                        yield await self._build_run(
+                            chunk,
+                            prepared_run.schema_id,
+                            validator,
+                            current_iteration=0,
+                            **new_kwargs,
+                        )
+                        final_error = None
+                    except ValidationError as e:
+                        logger.debug("Validation error in stream", exc_info=e)
+                        final_error = e
+                        continue
+                if final_error:
+                    raise WorkflowAIError(
+                        error=BaseError(
+                            message="Client side validation error in stream. This should not "
+                            "happen is the payload is already validated by the server. This probably"
+                            "means that there is an issue with the validator or the model.",
+                        ),
+                        response=None,
+                        partial_output=chunk.task_output if chunk else None,
+                        run_id=chunk.id if chunk else None,
+                    ) from final_error
                 return
-            except WorkflowAIError as e:  # noqa: PERF203
+            except WorkflowAIError as e:
                 await prepared_run.wait_for_exception(e)
 
     async def reply(
@@ -462,7 +483,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
         """
 
         prepared_run = await self._prepare_reply(run_id, user_message, tool_results, stream=False, **kwargs)
-        validator, new_kwargs = self._sanitize_validator(kwargs, default_validator(self.output_cls))
+        validator, new_kwargs = self._sanitize_validator(kwargs, self._default_validator)
 
         res = await self.api.post(prepared_run.route, prepared_run.request, returns=RunResponse, run=True)
         return await self._build_run(
