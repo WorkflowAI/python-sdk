@@ -444,7 +444,11 @@ class Agent(Generic[AgentInput, AgentOutput]):
                         )
                         final_error = None
                     except ValidationError as e:
-                        logger.debug("Validation error in stream", exc_info=e)
+                        logger.debug(
+                            "Client side validation error in stream. There is likely an "
+                            "issue with the validator or the model.",
+                            exc_info=e,
+                        )
                         final_error = e
                         continue
                 if final_error:

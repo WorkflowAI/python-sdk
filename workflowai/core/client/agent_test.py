@@ -1,5 +1,6 @@
 import importlib.metadata
 import json
+import logging
 from unittest.mock import Mock, patch
 
 import httpx
@@ -119,68 +120,6 @@ class TestRun:
             "version": "production",
             "stream": False,
         }
-
-    async def test_stream(self, httpx_mock: HTTPXMock, agent: Agent[HelloTaskInput, HelloTaskOutput]):
-        httpx_mock.add_response(
-            stream=IteratorStream(
-                [
-                    b'data: {"id":"1","task_output":{"message":""}}\n\n',
-                    b'data: {"id":"1","task_output":{"message":"hel"}}\n\ndata: {"id":"1","task_output":{"message":"hello"}}\n\n',  # noqa: E501
-                    b'data: {"id":"1","task_output":{"message":"hello"},"version":{"properties":{"model":"gpt-4o","temperature":0.5}},"cost_usd":0.01,"duration_seconds":10.1}\n\n',  # noqa: E501
-                ],
-            ),
-        )
-
-        chunks = [chunk async for chunk in agent.stream(HelloTaskInput(name="Alice"))]
-
-        outputs = [chunk.output for chunk in chunks]
-        assert outputs == [
-            HelloTaskOutput(message=""),
-            HelloTaskOutput(message="hel"),
-            HelloTaskOutput(message="hello"),
-            HelloTaskOutput(message="hello"),
-        ]
-        last_message = chunks[-1]
-        assert isinstance(last_message, Run)
-        assert last_message.version
-        assert last_message.version.properties.model == "gpt-4o"
-        assert last_message.version.properties.temperature == 0.5
-        assert last_message.cost_usd == 0.01
-        assert last_message.duration_seconds == 10.1
-
-    async def test_stream_not_optional(
-        self,
-        httpx_mock: HTTPXMock,
-        agent_not_optional: Agent[HelloTaskInput, HelloTaskOutputNotOptional],
-    ):
-        # Checking that streaming works even with non optional fields
-        # The first two chunks are missing a required key but the last one has it
-        httpx_mock.add_response(
-            stream=IteratorStream(
-                [
-                    b'data: {"id":"1","task_output":{"message":""}}\n\n',
-                    b'data: {"id":"1","task_output":{"message":"hel"}}\n\ndata: {"id":"1","task_output":{"message":"hello"}}\n\n',  # noqa: E501
-                    b'data: {"id":"1","task_output":{"message":"hello", "another_field": "test"},"version":{"properties":{"model":"gpt-4o","temperature":0.5}},"cost_usd":0.01,"duration_seconds":10.1}\n\n',  # noqa: E501
-                ],
-            ),
-        )
-
-        chunks = [chunk async for chunk in agent_not_optional.stream(HelloTaskInput(name="Alice"))]
-
-        messages = [chunk.output.message for chunk in chunks]
-        assert messages == ["", "hel", "hello", "hello"]
-
-        for chunk in chunks[:-1]:
-            assert chunk.output.another_field == ""
-        assert chunks[-1].output.another_field == "test"
-
-        last_message = chunks[-1]
-        assert isinstance(last_message, Run)
-        assert last_message.version
-        assert last_message.version.properties.model == "gpt-4o"
-        assert last_message.version.properties.temperature == 0.5
-        assert last_message.cost_usd == 0.01
-        assert last_message.duration_seconds == 10.1
 
     async def test_run_with_env(self, httpx_mock: HTTPXMock, agent: Agent[HelloTaskInput, HelloTaskOutput]):
         httpx_mock.add_response(json=fixtures_json("task_run.json"))
@@ -1024,3 +963,118 @@ class TestFetchCompletions:
                 ),
             ),
         ]
+
+
+class TestStream:
+    async def test_stream(self, httpx_mock: HTTPXMock, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        httpx_mock.add_response(
+            stream=IteratorStream(
+                [
+                    b'data: {"id":"1","task_output":{"message":""}}\n\n',
+                    b'data: {"id":"1","task_output":{"message":"hel"}}\n\ndata: {"id":"1","task_output":{"message":"hello"}}\n\n',  # noqa: E501
+                    b'data: {"id":"1","task_output":{"message":"hello"},"version":{"properties":{"model":"gpt-4o","temperature":0.5}},"cost_usd":0.01,"duration_seconds":10.1}\n\n',  # noqa: E501
+                ],
+            ),
+        )
+
+        chunks = [chunk async for chunk in agent.stream(HelloTaskInput(name="Alice"))]
+
+        outputs = [chunk.output for chunk in chunks]
+        assert outputs == [
+            HelloTaskOutput(message=""),
+            HelloTaskOutput(message="hel"),
+            HelloTaskOutput(message="hello"),
+            HelloTaskOutput(message="hello"),
+        ]
+        last_message = chunks[-1]
+        assert isinstance(last_message, Run)
+        assert last_message.version
+        assert last_message.version.properties.model == "gpt-4o"
+        assert last_message.version.properties.temperature == 0.5
+        assert last_message.cost_usd == 0.01
+        assert last_message.duration_seconds == 10.1
+
+    async def test_stream_not_optional(
+        self,
+        httpx_mock: HTTPXMock,
+        agent_not_optional: Agent[HelloTaskInput, HelloTaskOutputNotOptional],
+    ):
+        # Checking that streaming works even with non optional fields
+        # The first two chunks are missing a required key but the last one has it
+        httpx_mock.add_response(
+            stream=IteratorStream(
+                [
+                    b'data: {"id":"1","task_output":{"message":""}}\n\n',
+                    b'data: {"id":"1","task_output":{"message":"hel"}}\n\ndata: {"id":"1","task_output":{"message":"hello"}}\n\n',  # noqa: E501
+                    b'data: {"id":"1","task_output":{"message":"hello", "another_field": "test"},"version":{"properties":{"model":"gpt-4o","temperature":0.5}},"cost_usd":0.01,"duration_seconds":10.1}\n\n',  # noqa: E501
+                ],
+            ),
+        )
+
+        chunks = [chunk async for chunk in agent_not_optional.stream(HelloTaskInput(name="Alice"))]
+
+        messages = [chunk.output.message for chunk in chunks]
+        assert messages == ["", "hel", "hello", "hello"]
+
+        for chunk in chunks[:-1]:
+            assert chunk.output.another_field == ""
+        assert chunks[-1].output.another_field == "test"
+
+        last_message = chunks[-1]
+        assert isinstance(last_message, Run)
+        assert last_message.version
+        assert last_message.version.properties.model == "gpt-4o"
+        assert last_message.version.properties.temperature == 0.5
+        assert last_message.cost_usd == 0.01
+        assert last_message.duration_seconds == 10.1
+
+    async def test_stream_validation_errors(
+        self,
+        agent: Agent[HelloTaskInput, HelloTaskOutput],
+        httpx_mock: HTTPXMock,
+        caplog: pytest.LogCaptureFixture,
+    ):
+        """Test that validation errors are properly skipped and logged during streaming"""
+        httpx_mock.add_response(
+            stream=IteratorStream(
+                [
+                    b'data: {"id":"1","task_output":{"message":""}}\n\n',
+                    # Middle chunk is passed
+                    b'data: {"id":"1","task_output":{"message":1}}\n\n',
+                    b'data: {"id":"1","task_output":{"message":"hello"}}\n\n',
+                ],
+            ),
+        )
+
+        with caplog.at_level(logging.DEBUG):
+            chunks = [chunk async for chunk in agent.stream(HelloTaskInput(name="Alice"))]
+
+        assert len(chunks) == 2
+        assert chunks[0].output.message == ""
+        assert chunks[1].output.message == "hello"
+        logs = [record for record in caplog.records if "Client side validation error in stream" in record.message]
+
+        assert len(logs) == 1
+        assert logs[0].levelname == "DEBUG"
+        assert logs[0].exc_info is not None
+
+    async def test_stream_validation_final_error(
+        self,
+        agent: Agent[HelloTaskInput, HelloTaskOutput],
+        httpx_mock: HTTPXMock,
+    ):
+        """Check that we properly raise an error if the final payload fails to validate."""
+        httpx_mock.add_response(
+            stream=IteratorStream(
+                [
+                    # Stream a single chunk that fails to validate
+                    b'data: {"id":"1","task_output":{"message":1}}\n\n',
+                ],
+            ),
+        )
+
+        with pytest.raises(WorkflowAIError) as e:
+            _ = [c async for c in agent.stream(HelloTaskInput(name="Alice"))]
+
+        assert e.value.partial_output == {"message": 1}
+        assert e.value.run_id == "1"
