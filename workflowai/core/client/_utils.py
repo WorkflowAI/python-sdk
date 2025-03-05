@@ -87,18 +87,15 @@ def build_retryable_wait(
     return _should_retry, _wait_for_exception
 
 
-def tolerant_validator(m: type[AgentOutput]) -> OutputValidator[AgentOutput]:
-    def _validator(data: dict[str, Any], has_tool_call_requests: bool) -> AgentOutput:  # noqa: ARG001
-        return construct_model_recursive(m, data)
-
-    return _validator
-
-
-def intolerant_validator(m: type[AgentOutput]) -> OutputValidator[AgentOutput]:
-    def _validator(data: dict[str, Any], has_tool_call_requests: bool) -> AgentOutput:
+def default_validator(m: type[AgentOutput]) -> OutputValidator[AgentOutput]:
+    def _validator(data: dict[str, Any], partial: bool) -> AgentOutput:
         # When we have tool call requests, the output can be empty
-        if has_tool_call_requests:
-            return tolerant_validator(m)(data, has_tool_call_requests)
+        if partial:
+            try:
+                return construct_model_recursive(m, data)
+            except Exception:  # noqa: BLE001
+                logger.warning("Failed to validate partial data: %s", data)
+                return m.model_construct(None, **data)
 
         return m.model_validate(data)
 

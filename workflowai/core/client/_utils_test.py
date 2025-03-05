@@ -6,9 +6,9 @@ from pydantic import BaseModel
 
 from workflowai.core.client._utils import (
     build_retryable_wait,
+    default_validator,
     global_default_version_reference,
     split_chunks,
-    tolerant_validator,
 )
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
 
@@ -59,13 +59,13 @@ class Recipe(BaseModel):
     ingredients: list[Ingredient]
 
 
-class TestTolerantValidator:
+class TestValidator:
     def test_tolerant_validator_nested_object(self):
-        validated = tolerant_validator(Recipe)(
+        validated = default_validator(Recipe)(
             {
                 "ingredients": [{"name": "salt"}],
             },
-            has_tool_call_requests=False,
+            partial=True,
         )
         for ingredient in validated.ingredients:
             assert isinstance(ingredient, Recipe.Ingredient)

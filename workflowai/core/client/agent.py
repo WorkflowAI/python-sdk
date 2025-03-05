@@ -22,9 +22,8 @@ from workflowai.core.client._models import (
 from workflowai.core.client._types import RunParams
 from workflowai.core.client._utils import (
     build_retryable_wait,
+    default_validator,
     global_default_version_reference,
-    intolerant_validator,
-    tolerant_validator,
 )
 from workflowai.core.domain.completion import Completion
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
@@ -295,8 +294,9 @@ class Agent(Generic[AgentInput, AgentOutput]):
         chunk: RunResponse,
         schema_id: int,
         validator: OutputValidator[AgentOutput],
+        partial: Optional[bool] = None,
     ) -> Run[AgentOutput]:
-        run = chunk.to_domain(self.agent_id, schema_id, validator)
+        run = chunk.to_domain(self.agent_id, schema_id, validator, partial)
         run._agent = self  # pyright: ignore [reportPrivateUsage]
         return run
 
@@ -362,7 +362,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
             Run[AgentOutput]: The task run object.
         """
         prepared_run = await self._prepare_run(agent_input, stream=False, **kwargs)
-        validator, new_kwargs = self._sanitize_validator(kwargs, intolerant_validator(self.output_cls))
+        validator, new_kwargs = self._sanitize_validator(kwargs, default_validator(self.output_cls))
 
         last_error = None
         while prepared_run.should_retry():
@@ -374,7 +374,6 @@ class Agent(Generic[AgentInput, AgentOutput]):
                     validator,
                     current_iteration=0,
                     # TODO[test]: add test with custom validator
-                    # We popped validator above
                     **new_kwargs,
                 )
             except WorkflowAIError as e:  # noqa: PERF203
@@ -419,10 +418,11 @@ class Agent(Generic[AgentInput, AgentOutput]):
             AsyncIterator[Run[AgentOutput]]: An async iterator yielding task run objects.
         """
         prepared_run = await self._prepare_run(agent_input, stream=True, **kwargs)
-        validator, new_kwargs = self._sanitize_validator(kwargs, tolerant_validator(self.output_cls))
+        validator, new_kwargs = self._sanitize_validator(kwargs, default_validator(self.output_cls))
 
         while prepared_run.should_retry():
             try:
+                chunk: Optional[RunResponse] = None
                 async for chunk in self.api.stream(
                     method="POST",
                     path=prepared_run.route,
@@ -462,7 +462,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
         """
 
         prepared_run = await self._prepare_reply(run_id, user_message, tool_results, stream=False, **kwargs)
-        validator, new_kwargs = self._sanitize_validator(kwargs, intolerant_validator(self.output_cls))
+        validator, new_kwargs = self._sanitize_validator(kwargs, default_validator(self.output_cls))
 
         res = await self.api.post(prepared_run.route, prepared_run.request, returns=RunResponse, run=True)
         return await self._build_run(

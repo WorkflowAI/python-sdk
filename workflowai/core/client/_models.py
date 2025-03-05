@@ -134,12 +134,18 @@ class RunResponse(BaseModel):
         task_id: str,
         task_schema_id: int,
         validator: OutputValidator[AgentOutput],
+        partial: Optional[bool] = None,
     ) -> Run[AgentOutput]:
+        # We do partial validation if either:
+        # - there are tool call requests, which means that the output can be empty
+        # - the run has not yet finished, for exmaple when streaming, in which case the duration_seconds is None
+        if partial is None:
+            partial = bool(self.tool_call_requests) or self.duration_seconds is None
         return Run(
             id=self.id,
             agent_id=task_id,
             schema_id=task_schema_id,
-            output=validator(self.task_output, self.tool_call_requests is not None),
+            output=validator(self.task_output, partial),
             version=self.version and self.version.to_domain(),
             duration_seconds=self.duration_seconds,
             cost_usd=self.cost_usd,
