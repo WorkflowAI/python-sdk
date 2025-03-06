@@ -13,7 +13,7 @@ import os
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 
 import workflowai
-from workflowai import Model, Run
+from workflowai import Model
 from workflowai.fields import Audio
 
 
@@ -67,7 +67,7 @@ class AudioClassification(BaseModel):
     id="audio-spam-detector",
     model=Model.GEMINI_1_5_FLASH_LATEST,
 )
-async def classify_audio(audio_input: AudioInput) -> Run[AudioClassification]:
+async def classify_audio(audio_input: AudioInput) -> AudioClassification:
     """
     Analyze the audio recording to determine if it's a spam/robocall.
 
@@ -119,7 +119,7 @@ async def main():
     # )
 
     # Classify the audio
-    run = await classify_audio(AudioInput(audio=audio))
+    run = await classify_audio.run(AudioInput(audio=audio))
 
     # Print results including cost and latency information
     print(run)

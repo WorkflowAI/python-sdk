@@ -23,7 +23,7 @@ import asyncio
 from pydantic import BaseModel, Field
 
 import workflowai
-from workflowai import Model, Run
+from workflowai import Model
 
 
 class CodeReviewInput(BaseModel):
@@ -77,7 +77,7 @@ class CodeReviewOutput(BaseModel):
     id="templated-code-reviewer",
     model=Model.CLAUDE_3_5_SONNET_LATEST,
 )
-async def review_code(review_input: CodeReviewInput) -> Run[CodeReviewOutput]:
+async def review_code(review_input: CodeReviewInput) -> CodeReviewOutput:
     """
     Review code based on specified parameters and guidelines.
 
@@ -142,7 +142,7 @@ def calculate_sum(numbers):
     return result
     """
 
-    run = await review_code(
+    run = await review_code.run(
         CodeReviewInput(
             language="python",
             code=python_code,

@@ -17,7 +17,7 @@ from typing import Literal, TypedDict
 from pydantic import BaseModel, Field
 
 import workflowai
-from workflowai import Model, Run
+from workflowai import Model
 
 # Import CacheUsage type
 CacheUsage = Literal["auto", "always", "never"]
@@ -54,7 +54,7 @@ class SOAPNote(BaseModel):
     id="soap-extractor",
     model=Model.LLAMA_3_3_70B,
 )
-async def extract_soap_notes(soap_input: SOAPInput) -> Run[SOAPNote]:
+async def extract_soap_notes(soap_input: SOAPInput) -> SOAPNote:
     """
     Extract SOAP notes from a medical consultation transcript.
 
@@ -91,7 +91,7 @@ async def demonstrate_caching(transcript: str):
     for cache_option in cache_options:
         start_time = time.time()
 
-        run = await extract_soap_notes(
+        run = await extract_soap_notes.run(
             SOAPInput(transcript=transcript),
             use_cache=cache_option,
         )

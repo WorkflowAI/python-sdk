@@ -6,12 +6,11 @@ This example demonstrates how to use streaming with WorkflowAI agents. It shows 
 """
 
 import asyncio
-from collections.abc import AsyncIterator
 
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 
 import workflowai
-from workflowai import Model, Run
+from workflowai import Model
 
 
 class TranslationInput(BaseModel):
@@ -30,7 +29,7 @@ class TranslationOutput(BaseModel):
 
 
 @workflowai.agent(id="french-translator", model=Model.CLAUDE_3_5_SONNET_LATEST)
-def translate_to_english(_: TranslationInput) -> AsyncIterator[Run[TranslationOutput]]:
+def translate_to_english(_: TranslationInput) -> TranslationOutput:
     """
     Translate French text into natural, fluent English.
 
@@ -74,7 +73,7 @@ async def main():
     # This ensures we can see the streaming effect in the example
     # Otherwise, subsequent runs would return the cached result instantly,
     # making it hard to observe the incremental streaming behavior
-    async for chunk in translate_to_english(TranslationInput(text=french_text), use_cache="never"):
+    async for chunk in translate_to_english.stream(TranslationInput(text=french_text), use_cache="never"):
         print(f"--- Translation Progress (Chunk {chunk_num}) ---")
         print(chunk.output.translation)
         print("-" * 50)

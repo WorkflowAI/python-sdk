@@ -17,7 +17,7 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 import workflowai
-from workflowai import Model, Run
+from workflowai import Model
 from workflowai.fields import File
 
 
@@ -79,7 +79,7 @@ class CalendarEventOutput(BaseModel):
     id="calendar-event-extractor",
     model=Model.GPT_4O_MINI_LATEST,
 )
-async def extract_calendar_event_from_email(email_input: EmailInput) -> Run[CalendarEventOutput]:
+async def extract_calendar_event_from_email(email_input: EmailInput) -> CalendarEventOutput:
     """
     Extract calendar event details from email content.
 
@@ -112,7 +112,7 @@ async def extract_calendar_event_from_email(email_input: EmailInput) -> Run[Cale
     id="calendar-event-extractor",
     model=Model.GPT_4O_MINI_LATEST,
 )
-async def extract_calendar_event_from_image(image_input: ImageInput) -> Run[CalendarEventOutput]:
+async def extract_calendar_event_from_image(image_input: ImageInput) -> CalendarEventOutput:
     """
     Extract calendar event details from an event poster or flyer image.
 
@@ -160,7 +160,7 @@ async def main():
         """,
     )
 
-    run = await extract_calendar_event_from_email(email1)
+    run = await extract_calendar_event_from_email.run(email1)
     print(run)
 
     # Example 2: Virtual meeting with more details
@@ -238,7 +238,7 @@ async def main():
     )
 
     try:
-        run = await extract_calendar_event_from_email(email4)
+        run = await extract_calendar_event_from_email.run(email4)
         print(run)
     except workflowai.WorkflowAIError as e:
         print(f"As expected, no calendar event found: {e!s}")

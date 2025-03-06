@@ -17,7 +17,7 @@ import asyncio
 from pydantic import BaseModel, Field
 
 import workflowai
-from workflowai import Model, Run
+from workflowai import Model
 
 
 class SQLGenerationInput(BaseModel):
@@ -49,7 +49,7 @@ class SQLGenerationOutput(BaseModel):
     id="text-to-sql",
     model=Model.CLAUDE_3_5_SONNET_LATEST,
 )
-async def generate_sql(review_input: SQLGenerationInput) -> Run[SQLGenerationOutput]:
+async def generate_sql(review_input: SQLGenerationInput) -> SQLGenerationOutput:
     """
     Convert natural language questions to SQL queries based on the provided schema.
 
@@ -121,7 +121,7 @@ async def main():
     # Example 1: Simple SELECT with conditions
     print("\nExample 1: Find expensive products")
     print("-" * 50)
-    run = await generate_sql(
+    run = await generate_sql.run(
         SQLGenerationInput(
             db_schema=schema,
             question="Show me all products that cost more than $100, ordered by price descending",
@@ -132,7 +132,7 @@ async def main():
     # Example 2: JOIN with aggregation
     print("\nExample 2: Customer order summary")
     print("-" * 50)
-    run = await generate_sql(
+    run = await generate_sql.run(
         SQLGenerationInput(
             db_schema=schema,
             question=(
@@ -146,7 +146,7 @@ async def main():
     # Example 3: Complex query
     print("\nExample 3: Product category analysis")
     print("-" * 50)
-    run = await generate_sql(
+    run = await generate_sql.run(
         SQLGenerationInput(
             db_schema=schema,
             question=(

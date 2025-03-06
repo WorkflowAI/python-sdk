@@ -9,7 +9,7 @@ import asyncio
 from pydantic import BaseModel, Field
 
 import workflowai
-from workflowai import Model, Run
+from workflowai import Model
 
 
 class ContextGeneratorInput(BaseModel):
@@ -37,7 +37,7 @@ class ContextGeneratorOutput(BaseModel):
     id="context-generator",
     model=Model.CLAUDE_3_5_SONNET_LATEST,
 )
-async def generate_chunk_context(context_input: ContextGeneratorInput) -> Run[ContextGeneratorOutput]:
+async def generate_chunk_context(context_input: ContextGeneratorInput) -> ContextGeneratorOutput:
     """
     Here is the chunk we want to situate within the whole document.
     Please give a short succinct context to situate this chunk within the overall document
@@ -80,9 +80,9 @@ async def main():
         chunk_content=chunk_content,
     )
 
-    run = await generate_chunk_context(context_input)
+    run = await generate_chunk_context.run(context_input)
     print("\nGenerated Context:")
-    print(run.output.context)
+    print(run)
 
 
 if __name__ == "__main__":

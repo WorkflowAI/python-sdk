@@ -11,7 +11,7 @@ import asyncio
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 
 import workflowai
-from workflowai import Model, Run
+from workflowai import Model
 
 
 class UptimeInput(BaseModel):
@@ -40,7 +40,7 @@ class UptimeOutput(BaseModel):
     id="uptime-checker",
     model=Model.GPT_4O_MINI_LATEST,
 )
-async def check_uptime(uptime_input: UptimeInput, use_cache: str = "never") -> Run[UptimeOutput]:
+async def check_uptime(uptime_input: UptimeInput, use_cache: str = "never") -> UptimeOutput:
     """
     Fetch and analyze uptime data from an API status page.
     Use @browser-text to get the page content.
@@ -68,7 +68,7 @@ async def main():
     print("-" * 50)
 
     # Get uptime data with caching disabled
-    run = await check_uptime(uptime_input, use_cache="never")
+    run = await check_uptime.run(uptime_input, use_cache="never")
 
     # Print the run
     print(run)
