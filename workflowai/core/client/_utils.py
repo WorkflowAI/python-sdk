@@ -13,6 +13,7 @@ from workflowai.core._logger import logger
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
 from workflowai.core.domain.task import AgentOutput
 from workflowai.core.domain.version_reference import VersionReference
+from workflowai.core.utils._pydantic import partial_model
 
 delimiter = re.compile(r'\}\n\ndata: \{"')
 
@@ -86,20 +87,12 @@ def build_retryable_wait(
     return _should_retry, _wait_for_exception
 
 
-def tolerant_validator(m: type[AgentOutput]) -> OutputValidator[AgentOutput]:
-    def _validator(data: dict[str, Any], has_tool_call_requests: bool) -> AgentOutput:  # noqa: ARG001
-        return m.model_construct(None, **data)
+def default_validator(m: type[AgentOutput]) -> OutputValidator[AgentOutput]:
+    partial_cls = partial_model(m)
 
-    return _validator
-
-
-def intolerant_validator(m: type[AgentOutput]) -> OutputValidator[AgentOutput]:
-    def _validator(data: dict[str, Any], has_tool_call_requests: bool) -> AgentOutput:
-        # When we have tool call requests, the output can be empty
-        if has_tool_call_requests:
-            return m.model_construct(None, **data)
-
-        return m.model_validate(data)
+    def _validator(data: dict[str, Any], partial: bool) -> AgentOutput:
+        model_cls = partial_cls if partial else m
+        return model_cls.model_validate(data)
 
     return _validator
 

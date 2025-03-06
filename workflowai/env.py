@@ -4,7 +4,7 @@ import os
 
 WORKFLOWAI_DEFAULT_MODEL = os.getenv("WORKFLOWAI_DEFAULT_MODEL", "gemini-1.5-pro-latest")
 
-WORKFLOWAI_API_URL = os.getenv("WORKFLOWAI_API_URL")
+WORKFLOWAI_API_URL = os.getenv("WORKFLOWAI_API_URL", "https://run.workflowai.com")
 
 
 def _default_app_url():

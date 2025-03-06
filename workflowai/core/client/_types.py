@@ -11,6 +11,7 @@ from typing import (
 from typing_extensions import Unpack
 
 from workflowai.core._common_types import AgentInputContra, AgentOutputCov, RunParams
+from workflowai.core.client._models import ModelInfo
 from workflowai.core.domain.run import Run
 from workflowai.core.domain.task import AgentInput, AgentOutput
 from workflowai.core.domain.tool_call import ToolCallResult
@@ -49,7 +50,7 @@ RunTemplate = Union[
 ]
 
 
-class _BaseProtocol(_BaseObject, Generic[AgentInputContra, AgentOutput], Protocol):
+class AgentInterface(_BaseObject, Generic[AgentInputContra, AgentOutput], Protocol):
     __kwdefaults__: Optional[dict[str, Any]]
     __code__: Any
 
@@ -75,8 +76,10 @@ class _BaseProtocol(_BaseObject, Generic[AgentInputContra, AgentOutput], Protoco
         **kwargs: Unpack[RunParams[AgentOutput]],
     ): ...
 
+    async def list_models(self) -> list[ModelInfo]: ...
 
-class RunnableAgent(_BaseProtocol[AgentInputContra, AgentOutput], Protocol):
+
+class RunnableAgent(AgentInterface[AgentInputContra, AgentOutput], Protocol):
     async def __call__(
         self,
         _: AgentInputContra,
@@ -85,7 +88,7 @@ class RunnableAgent(_BaseProtocol[AgentInputContra, AgentOutput], Protocol):
     ) -> Run[AgentOutput]: ...
 
 
-class RunnableOutputAgent(_BaseProtocol[AgentInputContra, AgentOutput], Protocol):
+class RunnableOutputAgent(AgentInterface[AgentInputContra, AgentOutput], Protocol):
     async def __call__(
         self,
         _: AgentInputContra,
@@ -94,7 +97,7 @@ class RunnableOutputAgent(_BaseProtocol[AgentInputContra, AgentOutput], Protocol
     ) -> AgentOutput: ...
 
 
-class StreamableAgent(_BaseProtocol[AgentInputContra, AgentOutput], Protocol):
+class StreamableAgent(AgentInterface[AgentInputContra, AgentOutput], Protocol):
     def __call__(
         self,
         _: AgentInputContra,
@@ -103,7 +106,7 @@ class StreamableAgent(_BaseProtocol[AgentInputContra, AgentOutput], Protocol):
     ) -> AsyncIterator[Run[AgentOutput]]: ...
 
 
-class StreamableOutputAgent(_BaseProtocol[AgentInputContra, AgentOutput], Protocol):
+class StreamableOutputAgent(AgentInterface[AgentInputContra, AgentOutput], Protocol):
     def __call__(
         self,
         _: AgentInputContra,

@@ -137,8 +137,16 @@ URL: https://workflowai.hello/_/agents/agent-id/runs/run-id"""
 
 
 class TestRunURL:
+    # The @patch decorator from unittest.mock temporarily replaces the value of an attribute
+    # during the execution of the decorated test function. The original value is restored
+    # after the test completes.
+
+    # To check what happens in different environemnt configurations, see env_test.py
+
+    # Here we patch WORKFLOWAI_APP_URL to test the direct app URL case
     @patch("workflowai.env.WORKFLOWAI_APP_URL", "https://workflowai.hello")
     def test_run_url(self, run1: Run[_TestOutput]):
+        # The patched value is only active during this test method
         assert run1.run_url == "https://workflowai.hello/_/agents/agent-id/runs/run-id"
 
 

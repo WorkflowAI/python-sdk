@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "workflowai"
-version = "0.6.0.dev17"
+version = "0.6.0.dev21"
 description = ""
 authors = ["Guillaume Aquilina <guillaume@workflowai.com>"]
 readme = "README.md"

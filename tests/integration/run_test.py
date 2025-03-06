@@ -77,11 +77,11 @@ async def test_stream_task_run(test_client: IntTestClient) -> None:
     task_input = CityToCapitalTaskInput(city="Hello")
     chunks = [chunk async for chunk in city_to_capital(task_input)]
 
-    assert chunks == [
-        CityToCapitalTaskOutput(capital=""),
-        CityToCapitalTaskOutput(capital="Tok"),
-        CityToCapitalTaskOutput(capital="Tokyo"),
-        CityToCapitalTaskOutput(capital="Tokyo"),
+    assert [chunk.capital for chunk in chunks] == [
+        "",
+        "Tok",
+        "Tokyo",
+        "Tokyo",
     ]
 
 
@@ -94,11 +94,11 @@ async def test_stream_task_run_custom_id(test_client: IntTestClient) -> None:
     task_input = CityToCapitalTaskInput(city="Hello")
     chunks = [chunk async for chunk in city_to_capital(task_input)]
 
-    assert chunks == [
-        CityToCapitalTaskOutput(capital=""),
-        CityToCapitalTaskOutput(capital="Tok"),
-        CityToCapitalTaskOutput(capital="Tokyo"),
-        CityToCapitalTaskOutput(capital="Tokyo"),
+    assert [chunk.capital for chunk in chunks] == [
+        "",
+        "Tok",
+        "Tokyo",
+        "Tokyo",
     ]
 
 

@@ -3,7 +3,7 @@ from asyncio.log import logger
 from collections.abc import Awaitable, Callable, Iterable
 from typing import Any, Generic, NamedTuple, Optional, Union, cast
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from typing_extensions import Unpack
 
 from workflowai.core._common_types import BaseRunParams, OutputValidator, VersionRunParams
@@ -12,6 +12,7 @@ from workflowai.core.client._models import (
     CompletionsResponse,
     CreateAgentRequest,
     CreateAgentResponse,
+    ListModelsRequest,
     ListModelsResponse,
     ModelInfo,
     ReplyRequest,
@@ -21,9 +22,8 @@ from workflowai.core.client._models import (
 from workflowai.core.client._types import RunParams
 from workflowai.core.client._utils import (
     build_retryable_wait,
+    default_validator,
     global_default_version_reference,
-    intolerant_validator,
-    tolerant_validator,
 )
 from workflowai.core.domain.completion import Completion
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
@@ -101,6 +101,8 @@ class Agent(Generic[AgentInput, AgentOutput]):
         self.version = version
         self._api = (lambda: api) if isinstance(api, APIClient) else api
         self._tools = self.build_tools(tools) if tools else None
+
+        self._default_validator = default_validator(output_cls)
 
     @classmethod
     def build_tools(cls, tools: Iterable[Callable[..., Any]]):
@@ -294,8 +296,9 @@ class Agent(Generic[AgentInput, AgentOutput]):
         chunk: RunResponse,
         schema_id: int,
         validator: OutputValidator[AgentOutput],
+        partial: Optional[bool] = None,
     ) -> Run[AgentOutput]:
-        run = chunk.to_domain(self.agent_id, schema_id, validator)
+        run = chunk.to_domain(self.agent_id, schema_id, validator, partial)
         run._agent = self  # pyright: ignore [reportPrivateUsage]
         return run
 
@@ -361,7 +364,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
             Run[AgentOutput]: The task run object.
         """
         prepared_run = await self._prepare_run(agent_input, stream=False, **kwargs)
-        validator, new_kwargs = self._sanitize_validator(kwargs, intolerant_validator(self.output_cls))
+        validator, new_kwargs = self._sanitize_validator(kwargs, self._default_validator)
 
         last_error = None
         while prepared_run.should_retry():
@@ -373,7 +376,6 @@ class Agent(Generic[AgentInput, AgentOutput]):
                     validator,
                     current_iteration=0,
                     # TODO[test]: add test with custom validator
-                    # We popped validator above
                     **new_kwargs,
                 )
             except WorkflowAIError as e:  # noqa: PERF203
@@ -418,10 +420,13 @@ class Agent(Generic[AgentInput, AgentOutput]):
             AsyncIterator[Run[AgentOutput]]: An async iterator yielding task run objects.
         """
         prepared_run = await self._prepare_run(agent_input, stream=True, **kwargs)
-        validator, new_kwargs = self._sanitize_validator(kwargs, tolerant_validator(self.output_cls))
+        validator, new_kwargs = self._sanitize_validator(kwargs, self._default_validator)
 
         while prepared_run.should_retry():
             try:
+                # Will store the error if the final payload fails to validate
+                final_error: Optional[Exception] = None
+                chunk: Optional[RunResponse] = None
                 async for chunk in self.api.stream(
                     method="POST",
                     path=prepared_run.route,
@@ -429,15 +434,36 @@ class Agent(Generic[AgentInput, AgentOutput]):
                     returns=RunResponse,
                     run=True,
                 ):
-                    yield await self._build_run(
-                        chunk,
-                        prepared_run.schema_id,
-                        validator,
-                        current_iteration=0,
-                        **new_kwargs,
-                    )
+                    try:
+                        yield await self._build_run(
+                            chunk,
+                            prepared_run.schema_id,
+                            validator,
+                            current_iteration=0,
+                            **new_kwargs,
+                        )
+                        final_error = None
+                    except ValidationError as e:
+                        logger.debug(
+                            "Client side validation error in stream. There is likely an "
+                            "issue with the validator or the model.",
+                            exc_info=e,
+                        )
+                        final_error = e
+                        continue
+                if final_error:
+                    raise WorkflowAIError(
+                        error=BaseError(
+                            message="Client side validation error in stream. This should not "
+                            "happen is the payload is already validated by the server. This probably"
+                            "means that there is an issue with the validator or the model.",
+                        ),
+                        response=None,
+                        partial_output=chunk.task_output if chunk else None,
+                        run_id=chunk.id if chunk else None,
+                    ) from final_error
                 return
-            except WorkflowAIError as e:  # noqa: PERF203
+            except WorkflowAIError as e:
                 await prepared_run.wait_for_exception(e)
 
     async def reply(
@@ -446,6 +472,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
         user_message: Optional[str] = None,
         tool_results: Optional[Iterable[ToolCallResult]] = None,
         current_iteration: int = 0,
+        max_retries: int = 2,
         **kwargs: Unpack[RunParams[AgentOutput]],
     ):
         """Reply to a run to provide additional information or context.
@@ -461,9 +488,20 @@ class Agent(Generic[AgentInput, AgentOutput]):
         """
 
         prepared_run = await self._prepare_reply(run_id, user_message, tool_results, stream=False, **kwargs)
-        validator, new_kwargs = self._sanitize_validator(kwargs, intolerant_validator(self.output_cls))
+        validator, new_kwargs = self._sanitize_validator(kwargs, self._default_validator)
 
-        res = await self.api.post(prepared_run.route, prepared_run.request, returns=RunResponse, run=True)
+        async def _with_retries():
+            err: Optional[WorkflowAIError] = None
+            for _ in range(max_retries):
+                try:
+                    return await self.api.post(prepared_run.route, prepared_run.request, returns=RunResponse, run=True)
+                except WorkflowAIError as e:  # noqa: PERF203
+                    if e.code != "object_not_found":
+                        raise e
+                    err = e
+            raise err or RuntimeError("This should never raise")
+
+        res = await _with_retries()
         return await self._build_run(
             res,
             prepared_run.schema_id,
@@ -477,7 +515,11 @@ class Agent(Generic[AgentInput, AgentOutput]):
         validator = kwargs.pop("validator", default)
         return validator, cast(BaseRunParams, kwargs)
 
-    async def list_models(self) -> list[ModelInfo]:
+    async def list_models(
+        self,
+        instructions: Optional[str] = None,
+        requires_tools: Optional[bool] = None,
+    ) -> list[ModelInfo]:
         """Fetch the list of available models from the API for this agent.
 
         Returns:
@@ -486,12 +528,22 @@ class Agent(Generic[AgentInput, AgentOutput]):
         Raises:
             ValueError: If the agent has not been registered (schema_id is None).
         """
+
         if not self.schema_id:
             self.schema_id = await self.register()
 
-        response = await self.api.get(
+        request_data = ListModelsRequest(instructions=instructions, requires_tools=requires_tools)
+
+        if instructions is None and self.version and isinstance(self.version, VersionProperties):
+            request_data.instructions = self.version.instructions
+
+        if requires_tools is None and self._tools:
+            request_data.requires_tools = True
+
+        response = await self.api.post(
             # The "_" refers to the currently authenticated tenant's namespace
             f"/v1/_/agents/{self.agent_id}/schemas/{self.schema_id}/models",
+            data=request_data,
             returns=ListModelsResponse,
         )
         return response.items
