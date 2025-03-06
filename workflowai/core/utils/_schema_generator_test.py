@@ -10,3 +10,26 @@ class TestJsonSchemaGenerator:
 
         schema = TestModel.model_json_schema(schema_generator=JsonSchemaGenerator)
         assert schema == {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}
+
+    def test_nested_model(self):
+        class NestedModel(BaseModel):
+            name: str
+
+        class TestModel(BaseModel):
+            nested: NestedModel
+
+        schema = TestModel.model_json_schema(schema_generator=JsonSchemaGenerator)
+        assert schema == {
+            "$defs": {
+                "NestedModel": {
+                    "type": "object",
+                    "properties": {"name": {"type": "string"}},
+                    "required": ["name"],
+                },
+            },
+            "type": "object",
+            "properties": {
+                "nested": {"$ref": "#/$defs/NestedModel"},
+            },
+            "required": ["nested"],
+        }

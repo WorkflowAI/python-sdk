@@ -15,5 +15,12 @@ class JsonSchemaGenerator(GenerateJsonSchema):
         return generated
 
     @override
+    def model_schema(self, *args: Any, **kwargs: Any):
+        generated = super().model_schema(*args, **kwargs)
+        # Remove the title from the schema
+        generated.pop("title", None)
+        return generated
+
+    @override
     def field_title_should_be_set(self, *args: Any, **kwargs: Any) -> bool:
         return False
