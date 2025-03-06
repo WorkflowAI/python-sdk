@@ -29,7 +29,7 @@ class TranslationOutput(BaseModel):
 
 
 @workflowai.agent(id="french-translator", model=Model.CLAUDE_3_5_SONNET_LATEST)
-def translate_to_english(_: TranslationInput) -> TranslationOutput:
+async def translate_to_english(_: TranslationInput) -> TranslationOutput:
     """
     Translate French text into natural, fluent English.
 
