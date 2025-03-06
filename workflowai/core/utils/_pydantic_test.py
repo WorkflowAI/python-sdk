@@ -7,7 +7,7 @@ from workflowai.core.utils._pydantic import partial_model
 
 
 class TestPartialModel:
-    def test_partial_model_equals(self):
+    def test_partial_model_equals(self, recwarn: pytest.WarningsRecorder):
         class SimpleModel(BaseModel):
             name: str
 
@@ -15,6 +15,8 @@ class TestPartialModel:
         assert partial.model_validate({"name": "John"}) == SimpleModel(name="John")
 
         assert SimpleModel(name="John") == partial.model_validate({"name": "John"})
+
+        assert len(recwarn.list) == 0
 
     def test_simple_model(self):
         class SimpleModel(BaseModel):

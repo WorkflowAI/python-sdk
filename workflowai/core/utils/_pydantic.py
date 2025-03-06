@@ -1,3 +1,4 @@
+import warnings
 from collections.abc import Mapping, Sequence
 from typing import Any, TypeVar, get_args, get_origin
 
@@ -25,9 +26,11 @@ def _copy_field_info(field_info: FieldInfo, **overrides: Any):
     certain values.
     """
 
+    _excluded = {"annotation", "required"}
+
     kwargs = overrides
     for k, v in field_info.__repr_args__():
-        if k in kwargs or not k:
+        if k in kwargs or not k or k in _excluded:
             continue
         kwargs[k] = v
 
@@ -79,7 +82,6 @@ def partial_model(base: type[BM]) -> type[BM]:
         overrides: dict[str, Any] = {}
         try:
             annotation = _optional_annotation(field.annotation)
-            overrides["annotation"] = annotation
             overrides["default"] = _default_value_from_annotation(annotation)
         except Exception:  # noqa: BLE001
             logger.debug("Failed to make annotation optional", exc_info=True)
@@ -95,10 +97,12 @@ def partial_model(base: type[BM]) -> type[BM]:
             return False
         return o1.model_dump() == o2.model_dump()
 
-    return create_model(  # pyright: ignore [reportCallIssue, reportUnknownVariableType]
-        f"Partial{base.__name__}",
-        __base__=base,
-        __eq__=custom_eq,
-        __hash__=base.__hash__,
-        **default_fields,  # pyright: ignore [reportArgumentType]
-    )
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=RuntimeWarning, message="fields may not start with an underscore")
+        return create_model(  # pyright: ignore [reportCallIssue, reportUnknownVariableType]
+            f"Partial{base.__name__}",
+            __base__=base,
+            __eq__=custom_eq,
+            __hash__=base.__hash__,
+            **default_fields,  # pyright: ignore [reportArgumentType]
+        )
