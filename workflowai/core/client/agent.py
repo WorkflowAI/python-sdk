@@ -472,6 +472,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
         user_message: Optional[str] = None,
         tool_results: Optional[Iterable[ToolCallResult]] = None,
         current_iteration: int = 0,
+        max_retries: int = 2,
         **kwargs: Unpack[RunParams[AgentOutput]],
     ):
         """Reply to a run to provide additional information or context.
@@ -489,7 +490,18 @@ class Agent(Generic[AgentInput, AgentOutput]):
         prepared_run = await self._prepare_reply(run_id, user_message, tool_results, stream=False, **kwargs)
         validator, new_kwargs = self._sanitize_validator(kwargs, self._default_validator)
 
-        res = await self.api.post(prepared_run.route, prepared_run.request, returns=RunResponse, run=True)
+        async def _with_retries():
+            err: Optional[WorkflowAIError] = None
+            for _ in range(max_retries):
+                try:
+                    return await self.api.post(prepared_run.route, prepared_run.request, returns=RunResponse, run=True)
+                except WorkflowAIError as e:  # noqa: PERF203
+                    if e.code != "object_not_found":
+                        raise e
+                    err = e
+            raise err or RuntimeError("This should never raise")
+
+        res = await _with_retries()
         return await self._build_run(
             res,
             prepared_run.schema_id,

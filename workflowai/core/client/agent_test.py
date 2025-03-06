@@ -1078,3 +1078,75 @@ class TestStream:
 
         assert e.value.partial_output == {"message": 1}
         assert e.value.run_id == "1"
+
+
+class TestReply:
+    async def test_reply_success(self, httpx_mock: HTTPXMock, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        httpx_mock.add_response(
+            url="http://localhost:8000/v1/_/agents/123/runs/1/reply",
+            json=fixtures_json("task_run.json"),
+        )
+        reply = await agent.reply(run_id="1", user_message="test message")
+        assert reply.output.message == "Austin"
+
+        assert len(httpx_mock.get_requests()) == 1
+
+    async def test_reply_first_404(self, httpx_mock: HTTPXMock, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        """Check that we retry once if the run is not found"""
+
+        httpx_mock.add_response(
+            url="http://localhost:8000/v1/_/agents/123/runs/1/reply",
+            status_code=404,
+            json={
+                "error": {
+                    "code": "object_not_found",
+                },
+            },
+        )
+
+        httpx_mock.add_response(
+            url="http://localhost:8000/v1/_/agents/123/runs/1/reply",
+            json=fixtures_json("task_run.json"),
+        )
+
+        reply = await agent.reply(run_id="1", user_message="test message")
+        assert reply.output.message == "Austin"
+
+        assert len(httpx_mock.get_requests()) == 2
+
+    async def test_reply_not_not_found_error(
+        self,
+        httpx_mock: HTTPXMock,
+        agent: Agent[HelloTaskInput, HelloTaskOutput],
+    ):
+        """Check that we raise the error if it's not a 404"""
+        httpx_mock.add_response(
+            url="http://localhost:8000/v1/_/agents/123/runs/1/reply",
+            status_code=400,
+            json={
+                "error": {
+                    "code": "whatever",
+                },
+            },
+        )
+        with pytest.raises(WorkflowAIError) as e:
+            await agent.reply(run_id="1", user_message="test message")
+        assert e.value.code == "whatever"
+        assert len(httpx_mock.get_requests()) == 1
+
+    async def test_reply_multiple_retries(self, httpx_mock: HTTPXMock, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        """Check that we retry once if the run is not found"""
+        httpx_mock.add_response(
+            url="http://localhost:8000/v1/_/agents/123/runs/1/reply",
+            status_code=404,
+            json={
+                "error": {
+                    "code": "object_not_found",
+                },
+            },
+            is_reusable=True,
+        )
+        with pytest.raises(WorkflowAIError) as e:
+            await agent.reply(run_id="1", user_message="test message")
+        assert e.value.code == "object_not_found"
+        assert len(httpx_mock.get_requests()) == 2
