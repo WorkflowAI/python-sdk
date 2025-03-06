@@ -12,6 +12,7 @@ from workflowai.core.domain.errors import WorkflowAIError as WorkflowAIError
 from workflowai.core.domain.model import Model as Model
 from workflowai.core.domain.run import Run as Run
 from workflowai.core.domain.version import Version as Version
+from workflowai.core.domain.version_properties import VersionProperties as VersionProperties
 from workflowai.core.domain.version_reference import (
     VersionReference as VersionReference,
 )
