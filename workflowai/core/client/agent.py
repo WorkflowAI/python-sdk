@@ -21,6 +21,7 @@ from workflowai.core.client._models import (
 )
 from workflowai.core.client._types import RunParams
 from workflowai.core.client._utils import (
+    ModelInstructionTemperature,
     build_retryable_wait,
     default_validator,
     global_default_version_reference,
@@ -123,32 +124,42 @@ class Agent(Generic[AgentInput, AgentOutput]):
 
     def _sanitize_version(self, params: VersionRunParams) -> Union[str, int, dict[str, Any]]:
         """Combine a version requested at runtime and the version requested at build time."""
+        # Version contains either the requested version or the default version
+        # this is important to combine the check below of whether the version is a remote version (e-g production)
+        # or a local version (VersionProperties)
         version = params.get("version", self.version)
-        model = params.get("model")
-        instructions = params.get("instructions")
-        temperature = params.get("temperature")
 
-        has_property_overrides = bool(model or instructions or temperature or self._tools)
+        # Combine all overrides in a tuple
+        overrides = ModelInstructionTemperature.from_dict(params)
+        has_property_overrides = bool(self._tools or any(o is not None for o in overrides))
 
+        #  Version exists and is a remote version
         if version and not isinstance(version, VersionProperties):
+            # No property override so we return as is
             if not has_property_overrides and not self._tools:
                 return version
             # In the case where the version requested a build time was a remote version
             # (either an ID or an environment), we use an empty template for the version
-            logger.warning("Overriding remove version with a local one")
+            logger.warning("Overriding remote version with a local one")
             version = VersionProperties()
 
+        # Version does not exist and there are no overrides
+        # We return the default version
         if not version and not has_property_overrides:
             g = global_default_version_reference()
             return g.model_dump(by_alias=True, exclude_unset=True) if isinstance(g, VersionProperties) else g
 
         dumped = version.model_dump(by_alias=True, exclude_unset=True) if version else {}
 
-        if not dumped.get("model"):
+        requested = ModelInstructionTemperature.from_version(version)
+        defaults = ModelInstructionTemperature.from_version(self.version)
+        combined = ModelInstructionTemperature.combine(overrides, requested, defaults)
+
+        if not combined.model:
             # We always provide a default model since it is required by the API
             import workflowai
 
-            dumped["model"] = workflowai.DEFAULT_MODEL
+            combined = combined._replace(model=workflowai.DEFAULT_MODEL)
 
         if self._tools:
             dumped["enabled_tools"] = [
@@ -161,12 +172,12 @@ class Agent(Generic[AgentInput, AgentOutput]):
                 for tool in self._tools.values()
             ]
         # Finally we apply the property overrides
-        if model:
-            dumped["model"] = model
-        if instructions:
-            dumped["instructions"] = instructions
-        if temperature:
-            dumped["temperature"] = temperature
+        if combined.model is not None:
+            dumped["model"] = combined.model
+        if combined.instructions is not None:
+            dumped["instructions"] = combined.instructions
+        if combined.temperature is not None:
+            dumped["temperature"] = combined.temperature
         return dumped
 
     async def _prepare_run(self, agent_input: AgentInput, stream: bool, **kwargs: Unpack[RunParams[AgentOutput]]):

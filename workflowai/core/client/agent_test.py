@@ -385,6 +385,26 @@ class TestSanitizeVersion:
             "instructions": "You are a helpful assistant.",
         }
 
+    def test_with_explicit_version_without_instructions(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        """In the case where the agent has instructions but we send a version without instructions,
+        we use the instructions from the agent"""
+
+        agent.version = VersionProperties(instructions="You are a helpful assistant.")
+        sanitized = agent._sanitize_version({"version": VersionProperties(model="gpt-4o-latest")})  # pyright: ignore [reportPrivateUsage]
+        assert sanitized == {
+            "model": "gpt-4o-latest",
+            "instructions": "You are a helpful assistant.",
+        }
+
+    def test_override_with_0_temperature(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        """Test that a 0 temperature is not overridden by the default version"""
+        agent.version = VersionProperties(temperature=0.7)
+        sanitized = agent._sanitize_version({"version": VersionProperties(temperature=0)})  # pyright: ignore [reportPrivateUsage]
+        assert sanitized == {
+            "model": "gemini-1.5-pro-latest",
+            "temperature": 0.0,
+        }
+
 
 class TestListModels:
     async def test_list_models(self, agent: Agent[HelloTaskInput, HelloTaskOutput], httpx_mock: HTTPXMock):

@@ -4,14 +4,18 @@
 import asyncio
 import os
 import re
+from collections.abc import Mapping
 from json import JSONDecodeError
 from time import time
-from typing import Any
+from typing import Any, NamedTuple, Optional, Union
+
+from typing_extensions import Self
 
 from workflowai.core._common_types import OutputValidator
 from workflowai.core._logger import logger
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
 from workflowai.core.domain.task import AgentOutput
+from workflowai.core.domain.version_properties import VersionProperties
 from workflowai.core.domain.version_reference import VersionReference
 from workflowai.core.utils._pydantic import partial_model
 
@@ -113,3 +117,38 @@ def global_default_version_reference() -> VersionReference:
     logger.warning("Invalid default version: %s", version)
 
     return "production"
+
+
+class ModelInstructionTemperature(NamedTuple):
+    """A combination of run properties, with useful method
+    for combination"""
+
+    model: Optional[str] = None
+    instructions: Optional[str] = None
+    temperature: Optional[float] = None
+
+    @classmethod
+    def from_dict(cls, d: Mapping[str, Any]):
+        return cls(
+            model=d.get("model"),
+            instructions=d.get("instructions"),
+            temperature=d.get("temperature"),
+        )
+
+    @classmethod
+    def from_version(cls, version: Union[int, str, VersionProperties, None]):
+        if isinstance(version, VersionProperties):
+            return cls(
+                model=version.model,
+                instructions=version.instructions,
+                temperature=version.temperature,
+            )
+        return cls()
+
+    @classmethod
+    def combine(cls, *args: Self):
+        return cls(
+            model=next((a.model for a in args if a.model is not None), None),
+            instructions=next((a.instructions for a in args if a.instructions is not None), None),
+            temperature=next((a.temperature for a in args if a.temperature is not None), None),
+        )
