@@ -13,13 +13,13 @@ import os
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 
 import workflowai
-from workflowai import Model, Run
-from workflowai.fields import File
+from workflowai import Model
+from workflowai.fields import Audio
 
 
 class AudioInput(BaseModel):
     """Input containing the audio file to analyze."""
-    audio: File = Field(
+    audio: Audio = Field(
         description="The audio recording to analyze for spam/robocall detection",
     )
 
@@ -67,7 +67,7 @@ class AudioClassification(BaseModel):
     id="audio-spam-detector",
     model=Model.GEMINI_1_5_FLASH_LATEST,
 )
-async def classify_audio(audio_input: AudioInput) -> Run[AudioClassification]:
+async def classify_audio(audio_input: AudioInput) -> AudioClassification:
     """
     Analyze the audio recording to determine if it's a spam/robocall.
 
@@ -108,18 +108,18 @@ async def main():
     with open(audio_path, "rb") as f:  # noqa: ASYNC230
         audio_data = f.read()
 
-    audio = File(
+    audio = Audio(
         content_type="audio/mp3",
         data=base64.b64encode(audio_data).decode(),
     )
 
     # Example 2: Using a URL instead of base64 (commented out)
-    # audio = File(
+    # audio = Audio(
     #     url="https://example.com/audio/call.mp3"
     # )
 
     # Classify the audio
-    run = await classify_audio(AudioInput(audio=audio))
+    run = await classify_audio.run(AudioInput(audio=audio))
 
     # Print results including cost and latency information
     print(run)

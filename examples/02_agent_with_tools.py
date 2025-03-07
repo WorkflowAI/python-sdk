@@ -62,7 +62,7 @@ class HistoricalEventOutput(BaseModel):
 
 @workflowai.agent(
     id="historical-event-analyzer",
-    model=Model.GEMINI_1_5_FLASH_LATEST,
+    model=Model.GEMINI_2_0_FLASH_LATEST,
     tools=[get_current_date, calculate_days_between],
 )
 async def analyze_historical_event(event_input: HistoricalEventInput) -> HistoricalEventOutput:

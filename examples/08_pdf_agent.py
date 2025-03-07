@@ -5,13 +5,13 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 
 import workflowai
-from workflowai import Run, WorkflowAIError
+from workflowai import WorkflowAIError
 from workflowai.core.domain.model import Model
-from workflowai.fields import File
+from workflowai.fields import PDF
 
 
 class PDFQuestionInput(BaseModel):
-    pdf: File = Field(description="The PDF document to analyze")
+    pdf: PDF = Field(description="The PDF document to analyze")
     question: str = Field(description="The question to answer about the PDF content")
 
 
@@ -21,7 +21,7 @@ class PDFAnswerOutput(BaseModel):
 
 
 @workflowai.agent(id="pdf-answer", model=Model.CLAUDE_3_5_SONNET_LATEST)
-async def answer_pdf_question(_: PDFQuestionInput) -> Run[PDFAnswerOutput]:
+async def answer_pdf_question(_: PDFQuestionInput) -> PDFAnswerOutput:
     """
     Analyze the provided PDF document and answer the given question.
     Provide a clear and concise answer based on the content found in the PDF.
@@ -49,13 +49,13 @@ async def run_pdf_answer():
 
         content = base64.b64encode(pdf_file.read()).decode("utf-8")
 
-    pdf = File(content_type="application/pdf", data=content)
+    pdf = PDF(content_type="application/pdf", data=content)
     # Could also pass the content via url
-    # pdf = File(url="https://example.com/sample.pdf")
+    # pdf = PDF(url="https://example.com/sample.pdf")
     question = "How many stocks were sold? What is the total amount in USD?"
 
     try:
-        agent_run = await answer_pdf_question(
+        run = await answer_pdf_question.run(
             PDFQuestionInput(pdf=pdf, question=question),
             use_cache="auto",
         )
@@ -63,9 +63,7 @@ async def run_pdf_answer():
         print(f"Failed to run task. Code: {e.error.code}. Message: {e.error.message}")
         return
 
-    print("\n--------\nAgent output:\n", agent_run.output, "\n--------\n")
-    print(f"Cost: ${agent_run.cost_usd:.10f}")
-    print(f"Latency: {agent_run.duration_seconds:.2f}s")
+    print(run)
 
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ import asyncio
 from pydantic import BaseModel, Field
 
 import workflowai
-from workflowai import Model, Run
+from workflowai import Model
 
 
 class AskModelInput(BaseModel):
@@ -44,13 +44,14 @@ class AskModelOutput(BaseModel):
 # through the get_model_response agent. This creates a hierarchy where the
 # response-combiner orchestrates multiple model queries by delegating to get_model_response.
 async def ask_model(query_input: AskModelInput) -> AskModelOutput:
-    """Ask a specific model a question and get its response."""
-    run = await get_model_response(
+    """Ask a specific model a question and return its response."""
+    run = await get_model_response.run(
         MultiModelInput(
             question=query_input.question,
         ),
         model=query_input.model,
     )
+    # get_model_response.run() returns a Run[ModelResponse], so we need to access the output
     return AskModelOutput(response=run.output.response)
 
 
@@ -91,7 +92,7 @@ class CombinedOutput(BaseModel):
 @workflowai.agent(
     id="question-answerer",
 )
-async def get_model_response(query: MultiModelInput) -> Run[ModelResponse]:
+async def get_model_response(query: MultiModelInput) -> ModelResponse:
     """
     Make sure to:
     1. Provide a clear and detailed response
@@ -107,7 +108,7 @@ async def get_model_response(query: MultiModelInput) -> Run[ModelResponse]:
     model=Model.GPT_4O_MINI_LATEST,
     tools=[ask_model],
 )
-async def combine_responses(responses_input: CombinerInput) -> Run[CombinedOutput]:
+async def combine_responses(responses_input: CombinerInput) -> CombinedOutput:
     """
     Analyze and combine responses from multiple models into a single coherent answer.
     You should ask at least 3 different models to get a diverse set of perspectives.
@@ -137,7 +138,7 @@ async def main():
     question = "What is dark matter and why is it important for our understanding of the universe?"
 
     # Let the response-combiner handle asking the models
-    combined = await combine_responses(
+    combined = await combine_responses.run(
         CombinerInput(
             original_question=question,
         ),

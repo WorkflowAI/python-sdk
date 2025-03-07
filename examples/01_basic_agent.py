@@ -5,9 +5,11 @@ and returns information about the capital of its country. It showcases:
 1. Basic agent creation with input/output models
 2. Field descriptions and examples
 3. Cost and latency tracking
+4. How to fetch and analyze completions after a run
 """
 
 import asyncio
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -17,6 +19,7 @@ from workflowai import Model, Run
 
 class CityInput(BaseModel):
     """Input model for the city-to-capital agent."""
+
     city: str = Field(
         description="The name of the city for which to find the country's capital",
         examples=["Paris", "New York", "Tokyo"],
@@ -25,6 +28,7 @@ class CityInput(BaseModel):
 
 class CapitalOutput(BaseModel):
     """Output model containing information about the capital city."""
+
     country: str = Field(
         description="The country where the input city is located",
         examples=["France", "United States", "Japan"],
@@ -57,6 +61,21 @@ async def get_capital_info(city_input: CityInput) -> Run[CapitalOutput]:
     ...
 
 
+async def display_completions(run: Run[Any]) -> None:
+    """Helper function to display completions for a run."""
+    try:
+        completions = await run.fetch_completions()
+
+        for completion in completions:
+            print("\n--- Completion Details ---")
+
+            # Use model_dump_json for clean serialization
+            completion_json = completion.model_dump_json(indent=2)
+            print(completion_json)
+    except (ValueError, workflowai.WorkflowAIError) as e:
+        print(f"Error: {e}")
+
+
 async def main():
     # Example 1: Basic usage with Paris
     print("\nExample 1: Basic usage with Paris")
@@ -69,6 +88,9 @@ async def main():
     print("-" * 50)
     run = await get_capital_info.run(CityInput(city="Tokyo"))
     print(run)
+
+    # Fetch and display completions for the Tokyo example
+    await display_completions(run)
 
 
 if __name__ == "__main__":

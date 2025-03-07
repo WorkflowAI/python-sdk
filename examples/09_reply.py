@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 
 import workflowai
-from workflowai import Model, Run
+from workflowai import Model
 
 
 class NameExtractionInput(BaseModel):
@@ -43,7 +43,7 @@ class NameExtractionOutput(BaseModel):
 
 
 @workflowai.agent(id="name-extractor", model=Model.GPT_4O_MINI_LATEST)
-async def extract_name(_: NameExtractionInput) -> Run[NameExtractionOutput]:
+async def extract_name(_: NameExtractionInput) -> NameExtractionOutput:
     """
     Extract a person's first and last name from a sentence.
     Be precise and consider cultural variations in name formats.
@@ -64,7 +64,7 @@ async def main():
         print(f"\nProcessing: {sentence}")
 
         # Initial extraction
-        run = await extract_name(NameExtractionInput(sentence=sentence))
+        run = await extract_name.run(NameExtractionInput(sentence=sentence))
 
         print(f"Extracted: {run.output.first_name} {run.output.last_name}")
 

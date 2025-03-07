@@ -15,7 +15,7 @@ import asyncio
 from pydantic import BaseModel, Field
 
 import workflowai
-from workflowai import Model, Run
+from workflowai import Model
 
 
 class MultiModelInput(BaseModel):
@@ -56,7 +56,7 @@ class CombinedOutput(BaseModel):
 @workflowai.agent(
     id="question-answerer",
 )
-async def get_model_response(query: MultiModelInput) -> Run[ModelResponse]:
+async def get_model_response(query: MultiModelInput) -> ModelResponse:
     """Get response from the specified model."""
     ...
 
@@ -65,7 +65,7 @@ async def get_model_response(query: MultiModelInput) -> Run[ModelResponse]:
     id="response-combiner",
     model=Model.O3_MINI_2025_01_31_MEDIUM_REASONING_EFFORT,
 )
-async def combine_responses(responses_input: CombinerInput) -> Run[CombinedOutput]:
+async def combine_responses(responses_input: CombinerInput) -> CombinedOutput:
     """
     Analyze and combine responses from multiple models into a single coherent answer.
 
@@ -100,7 +100,7 @@ async def main():
 
     responses = []
     for model, model_name in models:
-        run = await get_model_response(
+        run = await get_model_response.run(
             MultiModelInput(
                 question=question,
                 model_name=model_name,
@@ -110,7 +110,7 @@ async def main():
         responses.append(run.output)
 
     # Combine responses
-    combined = await combine_responses(CombinerInput(responses=responses))
+    combined = await combine_responses.run(CombinerInput(responses=responses))
     print(combined)
 
 
