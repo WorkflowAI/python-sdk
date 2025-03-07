@@ -9,19 +9,17 @@ and returns information about the capital of its country. It showcases:
 """
 
 import asyncio
-from typing import TypeVar
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 import workflowai
 from workflowai import Model, Run
 
-# Type variable for the output model, constrained to BaseModel
-T = TypeVar("T", bound=BaseModel)
-
 
 class CityInput(BaseModel):
     """Input model for the city-to-capital agent."""
+
     city: str = Field(
         description="The name of the city for which to find the country's capital",
         examples=["Paris", "New York", "Tokyo"],
@@ -30,6 +28,7 @@ class CityInput(BaseModel):
 
 class CapitalOutput(BaseModel):
     """Output model containing information about the capital city."""
+
     country: str = Field(
         description="The country where the input city is located",
         examples=["France", "United States", "Japan"],
