@@ -62,7 +62,7 @@ async def get_capital_info(city_input: CityInput) -> Run[CapitalOutput]:
     ...
 
 
-async def display_completions(run: Run[T]) -> None:
+async def display_completions(run: Run[Any]) -> None:
     """Helper function to display completions for a run."""
     try:
         completions = await run.fetch_completions()
