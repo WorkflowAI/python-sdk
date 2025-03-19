@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "workflowai"
-version = "0.6.1"
+version = "0.6.2-dev1"
 description = "Python SDK for WorkflowAI"
 authors = ["Guillaume Aquilina <guillaume@workflowai.com>"]
 readme = "README.md"
@@ -63,7 +63,7 @@ unfixable = []
 [tool.ruff.lint.per-file-ignores]
 # in bin we use rich.print
 "bin/*" = ["T201"]
-"*_test.py" = ["S101"]
+"*_test.py" = ["S101", "S106"]
 "conftest.py" = ["S101"]
 "examples/*" = ["INP001", "T201", "ERA001"]
 

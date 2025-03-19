@@ -1,5 +1,5 @@
 from collections.abc import Callable, Iterable
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from typing_extensions import deprecated
 
@@ -82,3 +82,12 @@ def agent(
         model=model,
         tools=tools,
     )
+
+
+def send_feedback(
+    feedback_token: str,
+    outcome: Literal["positive", "negative"],
+    comment: Optional[str] = None,
+    user_id: Optional[str] = None,
+):
+    return shared_client.send_feedback(feedback_token, outcome, comment, user_id)

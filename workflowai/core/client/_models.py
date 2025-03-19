@@ -103,13 +103,13 @@ def tool_call_to_domain(tool_call: ToolCall) -> DToolCall:
     )
 
 
-class ToolCallRequest(TypedDict):
+class ToolCallRequestDict(TypedDict):
     id: str
     name: str
     input: dict[str, Any]
 
 
-def tool_call_request_to_domain(tool_call_request: ToolCallRequest) -> DToolCallRequest:
+def tool_call_request_to_domain(tool_call_request: ToolCallRequestDict) -> DToolCallRequest:
     return DToolCallRequest(
         id=tool_call_request["id"],
         name=tool_call_request["name"],
@@ -119,7 +119,7 @@ def tool_call_request_to_domain(tool_call_request: ToolCallRequest) -> DToolCall
 
 class RunResponse(BaseModel):
     id: str
-    task_output: dict[str, Any]
+    task_output: Optional[dict[str, Any]] = None
 
     version: Optional[Version] = None
     duration_seconds: Optional[float] = None
@@ -127,7 +127,7 @@ class RunResponse(BaseModel):
     metadata: Optional[dict[str, Any]] = None
 
     tool_calls: Optional[list[ToolCall]] = None
-    tool_call_requests: Optional[list[ToolCallRequest]] = None
+    tool_call_requests: Optional[list[ToolCallRequestDict]] = None
 
     feedback_token: Optional[str] = None
 
@@ -147,7 +147,7 @@ class RunResponse(BaseModel):
             id=self.id,
             agent_id=task_id,
             schema_id=task_schema_id,
-            output=validator(self.task_output, partial),
+            output=validator(self.task_output or {}, partial),
             version=self.version and self.version.to_domain(),
             duration_seconds=self.duration_seconds,
             cost_usd=self.cost_usd,
@@ -220,3 +220,10 @@ class CompletionsResponse(BaseModel):
     """Response from the completions API endpoint."""
 
     completions: list[Completion]
+
+
+class CreateFeedbackRequest(BaseModel):
+    feedback_token: str
+    outcome: Literal["positive", "negative"]
+    comment: Optional[str]
+    user_id: Optional[str]

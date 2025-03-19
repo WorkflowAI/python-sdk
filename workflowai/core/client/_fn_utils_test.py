@@ -19,7 +19,7 @@ from workflowai.core.client._fn_utils import (
     get_generic_args,
     is_async_iterator,
 )
-from workflowai.core.client._models import RunResponse
+from workflowai.core.client._models import RunRequest, RunResponse
 from workflowai.core.domain.run import Run
 
 
@@ -79,6 +79,29 @@ class TestAgentWrapper:
         assert isinstance(run, Run)
         assert run.id == "1"
         assert run.output == HelloTaskOutput(message="Hello, World!")
+
+    async def test_fn_run_with_default_cache(self, mock_api_client: Mock):
+        wrapped = agent_wrapper(lambda: mock_api_client, schema_id=1, agent_id="hello", use_cache="never")(self.fn_run)
+        assert isinstance(wrapped, _RunnableAgent)
+
+        mock_api_client.post.return_value = RunResponse(id="1", task_output={"message": "Hello, World!"})
+        run = await wrapped(HelloTaskInput(name="World"))
+        assert isinstance(run, Run)
+
+        mock_api_client.post.assert_called_once()
+        req = mock_api_client.post.call_args.args[1]
+        assert isinstance(req, RunRequest)
+        assert req.use_cache == "never"
+
+        mock_api_client.post.reset_mock()
+
+        # Check that it can be overridden
+        _ = await wrapped(HelloTaskInput(name="World"), use_cache="always")
+
+        mock_api_client.post.assert_called_once()
+        req = mock_api_client.post.call_args.args[1]
+        assert isinstance(req, RunRequest)
+        assert req.use_cache == "always"
 
     def fn_stream(self, task_input: HelloTaskInput) -> AsyncIterator[Run[HelloTaskOutput]]: ...
 

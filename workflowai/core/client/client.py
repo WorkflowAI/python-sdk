@@ -1,10 +1,12 @@
 import importlib.metadata
 from typing import (
+    Literal,
     Optional,
 )
 
 from workflowai.core.client._api import APIClient
 from workflowai.core.client._fn_utils import agent_wrapper
+from workflowai.core.client._models import CreateFeedbackRequest
 from workflowai.core.client._utils import global_default_version_reference
 from workflowai.core.domain.version_reference import VersionReference
 
@@ -39,3 +41,15 @@ class WorkflowAI:
         version: Optional[VersionReference] = None,
     ):
         return agent_wrapper(lambda: self.api, schema_id=schema_id, agent_id=id, version=version)
+
+    async def send_feedback(
+        self,
+        feedback_token: str,
+        outcome: Literal["positive", "negative"],
+        comment: Optional[str] = None,
+        user_id: Optional[str] = None,
+    ):
+        await self.api.post(
+            "/v1/feedback",
+            CreateFeedbackRequest(feedback_token=feedback_token, outcome=outcome, comment=comment, user_id=user_id),
+        )

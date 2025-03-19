@@ -15,6 +15,7 @@ from typing import (
 from pydantic import BaseModel, ValidationError
 from typing_extensions import Unpack
 
+from workflowai.core._common_types import OtherRunParams
 from workflowai.core.client._api import APIClient
 from workflowai.core.client._models import RunResponse
 from workflowai.core.client._types import (
@@ -131,7 +132,7 @@ class _RunnableAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOu
                 milliseconds. Defaults to 60000.
             max_retry_count (Optional[float], optional): The maximum number of retry attempts.
                 Defaults to 1.
-            max_tool_iterations (Optional[int], optional): Maximum number of tool iteration cycles.
+            max_turns (Optional[int], optional): Maximum number of tool iteration cycles.
                 Defaults to 10.
             validator (Optional[OutputValidator[AgentOutput]], optional): Custom validator for the
                 output.
@@ -194,7 +195,7 @@ class _RunnableOutputOnlyAgent(Agent[AgentInput, AgentOutput], Generic[AgentInpu
                 milliseconds. Defaults to 60000.
             max_retry_count (Optional[float], optional): The maximum number of retry attempts.
                 Defaults to 1.
-            max_tool_iterations (Optional[int], optional): Maximum number of tool iteration cycles.
+            max_turns (Optional[int], optional): Maximum number of tool iteration cycles.
                 Defaults to 10.
             validator (Optional[OutputValidator[AgentOutput]], optional): Custom validator for the
                 output.
@@ -234,7 +235,7 @@ class _RunnableStreamAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, A
                 milliseconds. Defaults to 60000.
             max_retry_count (Optional[float], optional): The maximum number of retry attempts.
                 Defaults to 1.
-            max_tool_iterations (Optional[int], optional): Maximum number of tool iteration cycles.
+            max_turns (Optional[int], optional): Maximum number of tool iteration cycles.
                 Defaults to 10.
             validator (Optional[OutputValidator[AgentOutput]], optional): Custom validator for the
                 output.
@@ -276,7 +277,7 @@ class _RunnableStreamOutputOnlyAgent(Agent[AgentInput, AgentOutput], Generic[Age
                 milliseconds. Defaults to 60000.
             max_retry_count (Optional[float], optional): The maximum number of retry attempts.
                 Defaults to 1.
-            max_tool_iterations (Optional[int], optional): Maximum number of tool iteration cycles.
+            max_turns (Optional[int], optional): Maximum number of tool iteration cycles.
                 Defaults to 10.
             validator (Optional[OutputValidator[AgentOutput]], optional): Custom validator for the
                 output.
@@ -318,6 +319,7 @@ def wrap_run_template(
     model: Optional[ModelOrStr],
     fn: RunTemplate[AgentInput, AgentOutput],
     tools: Optional[Iterable[Callable[..., Any]]] = None,
+    run_params: Optional[OtherRunParams] = None,
 ) -> Union[
     _RunnableAgent[AgentInput, AgentOutput],
     _RunnableOutputOnlyAgent[AgentInput, AgentOutput],
@@ -344,6 +346,7 @@ def wrap_run_template(
         schema_id=schema_id,
         version=version,
         tools=tools,
+        **(run_params or {}),
     )
 
 
@@ -358,13 +361,14 @@ def agent_wrapper(
     version: Optional[VersionReference] = None,
     model: Optional[ModelOrStr] = None,
     tools: Optional[Iterable[Callable[..., Any]]] = None,
+    **kwargs: Unpack[OtherRunParams],
 ) -> AgentDecorator:
     def wrap(fn: RunTemplate[AgentInput, AgentOutput]):
         tid = agent_id or agent_id_from_fn_name(fn)
         # TODO[types]: Not sure why a cast is needed here
         agent = cast(
             FinalRunTemplate[AgentInput, AgentOutput],
-            wrap_run_template(client, tid, schema_id, version, model, fn, tools),
+            wrap_run_template(client, tid, schema_id, version, model, fn, tools, kwargs),
         )
 
         agent.__doc__ = """A class representing an AI agent that can process inputs and generate outputs.

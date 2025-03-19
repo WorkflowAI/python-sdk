@@ -6,7 +6,12 @@ from typing import Any, Generic, NamedTuple, Optional, Union, cast
 from pydantic import BaseModel, ValidationError
 from typing_extensions import Unpack
 
-from workflowai.core._common_types import BaseRunParams, OutputValidator, VersionRunParams
+from workflowai.core._common_types import (
+    BaseRunParams,
+    OtherRunParams,
+    OutputValidator,
+    VersionRunParams,
+)
 from workflowai.core.client._api import APIClient
 from workflowai.core.client._models import (
     CompletionsResponse,
@@ -27,7 +32,7 @@ from workflowai.core.client._utils import (
     global_default_version_reference,
 )
 from workflowai.core.domain.completion import Completion
-from workflowai.core.domain.errors import BaseError, WorkflowAIError
+from workflowai.core.domain.errors import BaseError, MaxTurnsReachedError, WorkflowAIError
 from workflowai.core.domain.run import Run
 from workflowai.core.domain.task import AgentInput, AgentOutput
 from workflowai.core.domain.tool import Tool
@@ -83,7 +88,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
         ```
     """
 
-    _DEFAULT_MAX_ITERATIONS = 10
+    _DEFAULT_MAX_TURNS = 10
 
     def __init__(
         self,
@@ -94,6 +99,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
         schema_id: Optional[int] = None,
         version: Optional[VersionReference] = None,
         tools: Optional[Iterable[Callable[..., Any]]] = None,
+        **kwargs: Unpack[OtherRunParams],
     ):
         self.agent_id = agent_id
         self.schema_id = schema_id
@@ -104,6 +110,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
         self._tools = self.build_tools(tools) if tools else None
 
         self._default_validator = default_validator(output_cls)
+        self._other_run_params = kwargs
 
     @classmethod
     def build_tools(cls, tools: Iterable[Callable[..., Any]]):
@@ -180,6 +187,13 @@ class Agent(Generic[AgentInput, AgentOutput]):
             dumped["temperature"] = combined.temperature
         return dumped
 
+    def _get_run_param(self, key: str, params: OtherRunParams, default: Any = None) -> Any:
+        if key in params:
+            return params[key]  # pyright: ignore [reportUnknownVariableType]
+        if key in self._other_run_params:
+            return self._other_run_params[key]  # pyright: ignore [reportUnknownVariableType]
+        return default
+
     async def _prepare_run(self, agent_input: AgentInput, stream: bool, **kwargs: Unpack[RunParams[AgentOutput]]):
         schema_id = self.schema_id
         if not schema_id:
@@ -192,15 +206,14 @@ class Agent(Generic[AgentInput, AgentOutput]):
             task_input=agent_input.model_dump(by_alias=True),
             version=version,
             stream=stream,
-            use_cache=kwargs.get("use_cache"),
+            use_cache=self._get_run_param("use_cache", kwargs),
             metadata=kwargs.get("metadata"),
-            labels=kwargs.get("labels"),
         )
 
         route = f"/v1/_/agents/{self.agent_id}/schemas/{self.schema_id}/run"
         should_retry, wait_for_exception = build_retryable_wait(
-            kwargs.get("max_retry_delay", 60),
-            kwargs.get("max_retry_count", 1),
+            self._get_run_param("max_retry_delay", kwargs, 60),
+            self._get_run_param("max_retry_count", kwargs, 1),
         )
         return self._PreparedRun(request, route, should_retry, wait_for_exception, schema_id)
 
@@ -227,8 +240,8 @@ class Agent(Generic[AgentInput, AgentOutput]):
         )
         route = f"/v1/_/agents/{self.agent_id}/runs/{run_id}/reply"
         should_retry, wait_for_exception = build_retryable_wait(
-            kwargs.get("max_retry_delay", 60),
-            kwargs.get("max_retry_count", 1),
+            self._get_run_param("max_retry_delay", kwargs, 60),
+            self._get_run_param("max_retry_count", kwargs, 1),
         )
 
         return self._PreparedRun(request, route, should_retry, wait_for_exception, self.schema_id)
@@ -324,8 +337,14 @@ class Agent(Generic[AgentInput, AgentOutput]):
         run = self._build_run_no_tools(chunk, schema_id, validator)
 
         if run.tool_call_requests:
-            if current_iteration >= kwargs.get("max_iterations", self._DEFAULT_MAX_ITERATIONS):
-                raise WorkflowAIError(error=BaseError(message="max tool iterations reached"), response=None)
+            if current_iteration >= self._get_run_param("max_turns", kwargs, self._DEFAULT_MAX_TURNS):
+                if self._get_run_param("max_turns_raises", kwargs, default=True):
+                    raise MaxTurnsReachedError(
+                        error=BaseError(message="max tool iterations reached"),
+                        response=None,
+                        tool_call_requests=run.tool_call_requests,
+                    )
+                return run
             with_reply = await self._execute_tools(
                 run_id=run.id,
                 tool_call_requests=run.tool_call_requests,
@@ -368,7 +387,9 @@ class Agent(Generic[AgentInput, AgentOutput]):
             max_retry_delay (Optional[float], optional): The maximum delay between retries in milliseconds.
                 Defaults to 60000.
             max_retry_count (Optional[float], optional): The maximum number of retry attempts. Defaults to 1.
-            max_tool_iterations (Optional[int], optional): Maximum number of tool iteration cycles. Defaults to 10.
+            max_turns (Optional[int], optional): Maximum number of tool iteration cycles. Defaults to 10.
+            max_turns_raises (Optional[bool], optional): Whether to raise an error when the maximum number of turns is
+                reached. Defaults to True.
             validator (Optional[OutputValidator[AgentOutput]], optional): Custom validator for the output.
 
         Returns:
@@ -385,7 +406,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
                     res,
                     prepared_run.schema_id,
                     validator,
-                    current_iteration=0,
+                    current_iteration=1,
                     # TODO[test]: add test with custom validator
                     **new_kwargs,
                 )
@@ -424,7 +445,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
             max_retry_delay (Optional[float], optional): The maximum delay between retries in milliseconds.
                 Defaults to 60000.
             max_retry_count (Optional[float], optional): The maximum number of retry attempts. Defaults to 1.
-            max_tool_iterations (Optional[int], optional): Maximum number of tool iteration cycles. Defaults to 10.
+            max_turns (Optional[int], optional): Maximum number of tool iteration cycles. Defaults to 10.
             validator (Optional[OutputValidator[AgentOutput]], optional): Custom validator for the output.
 
         Returns:
