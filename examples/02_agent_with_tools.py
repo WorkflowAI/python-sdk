@@ -11,10 +11,13 @@ import asyncio
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 import workflowai
 from workflowai import Model
+
+load_dotenv(override=True)
 
 
 def get_current_date() -> str:
@@ -31,6 +34,7 @@ def calculate_days_between(date1: str, date2: str) -> int:
 
 class HistoricalEventInput(BaseModel):
     """Input model for querying historical events."""
+
     query: str = Field(
         description="A query about a historical event",
         examples=[
@@ -43,6 +47,7 @@ class HistoricalEventInput(BaseModel):
 
 class HistoricalEventOutput(BaseModel):
     """Output model containing information about a historical event."""
+
     event_date: str = Field(
         description="The date of the event in ISO format (YYYY-MM-DD)",
         examples=["1969-07-20", "1945-09-02", "1776-07-04"],
@@ -98,6 +103,16 @@ async def main():
     print("-" * 50)
     run = await analyze_historical_event.run(
         HistoricalEventInput(query="When did World War II end?"),
+    )
+    print(run)
+
+    # Example: Make the same query but limit at a single turn to get the underlying tool call requests
+    print("\nExample: Latest Mars Landing")
+    print("-" * 50)
+    run = await analyze_historical_event.run(
+        HistoricalEventInput(query="When was the latest Mars landing?"),
+        max_turns=0,
+        max_turns_raises=False,
     )
     print(run)
 

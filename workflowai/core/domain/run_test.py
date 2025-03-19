@@ -8,6 +8,7 @@ from workflowai.core.domain.run import (
     Run,
     _AgentBase,  # pyright: ignore [reportPrivateUsage]
 )
+from workflowai.core.domain.tool_call import ToolCallRequest
 from workflowai.core.domain.version import Version
 from workflowai.core.domain.version_properties import VersionProperties
 
@@ -59,23 +60,29 @@ class TestRunEquality:
         assert run1 == run2
 
 
-# Test that format_output correctly formats:
-# 1. The output as a JSON object
-# 2. The cost with $ prefix and correct precision
-# 3. The latency with 2 decimal places and 's' suffix
-# 4. The run URL
-@patch("workflowai.env.WORKFLOWAI_APP_URL", "https://workflowai.hello")
-def test_format_output_full():
-    run = Run[_TestOutput](
-        id="run-id",
-        agent_id="agent-id",
-        schema_id=1,
-        output=_TestOutput(message="hello"),
-        duration_seconds=1.23,
-        cost_usd=0.001,
-    )
+class TestRunFormatOutput:
+    @pytest.fixture(autouse=True)
+    def mock_app_url(self):
+        with patch("workflowai.env.WORKFLOWAI_APP_URL", "https://workflowai.hello") as mock:
+            yield mock
 
-    expected = """\nOutput:
+    # Test that format_output correctly formats:
+    # 1. The output as a JSON object
+    # 2. The cost with $ prefix and correct precision
+    # 3. The latency with 2 decimal places and 's' suffix
+    # 4. The run URL
+
+    def test_format_output_full(self):
+        run = Run[_TestOutput](
+            id="run-id",
+            agent_id="agent-id",
+            schema_id=1,
+            output=_TestOutput(message="hello"),
+            duration_seconds=1.23,
+            cost_usd=0.001,
+        )
+
+        expected = """\nOutput:
 ==================================================
 {
   "message": "hello"
@@ -85,21 +92,19 @@ Cost: $ 0.00100
 Latency: 1.23s
 URL: https://workflowai.hello/_/agents/agent-id/runs/run-id"""
 
-    assert run.format_output() == expected
+        assert run.format_output() == expected
 
+    def test_format_output_very_low_cost(self):
+        run = Run[_TestOutput](
+            id="run-id",
+            agent_id="agent-id",
+            schema_id=1,
+            output=_TestOutput(message="hello"),
+            duration_seconds=1.23,
+            cost_usd=4.97625e-05,
+        )
 
-@patch("workflowai.env.WORKFLOWAI_APP_URL", "https://workflowai.hello")
-def test_format_output_very_low_cost():
-    run = Run[_TestOutput](
-        id="run-id",
-        agent_id="agent-id",
-        schema_id=1,
-        output=_TestOutput(message="hello"),
-        duration_seconds=1.23,
-        cost_usd=4.97625e-05,
-    )
-
-    expected = """\nOutput:
+        expected = """\nOutput:
 ==================================================
 {
   "message": "hello"
@@ -109,23 +114,21 @@ Cost: $ 0.00005
 Latency: 1.23s
 URL: https://workflowai.hello/_/agents/agent-id/runs/run-id"""
 
-    assert run.format_output() == expected
+        assert run.format_output() == expected
 
+    # Test that format_output works correctly when cost and latency are not provided:
+    # 1. The output is still formatted as a JSON object
+    # 2. No cost or latency lines are included in the output
+    # 3. The run URL is still included
+    def test_format_output_no_cost_latency(self):
+        run = Run[_TestOutput](
+            id="run-id",
+            agent_id="agent-id",
+            schema_id=1,
+            output=_TestOutput(message="hello"),
+        )
 
-# Test that format_output works correctly when cost and latency are not provided:
-# 1. The output is still formatted as a JSON object
-# 2. No cost or latency lines are included in the output
-# 3. The run URL is still included
-@patch("workflowai.env.WORKFLOWAI_APP_URL", "https://workflowai.hello")
-def test_format_output_no_cost_latency():
-    run = Run[_TestOutput](
-        id="run-id",
-        agent_id="agent-id",
-        schema_id=1,
-        output=_TestOutput(message="hello"),
-    )
-
-    expected = """\nOutput:
+        expected = """\nOutput:
 ==================================================
 {
   "message": "hello"
@@ -133,7 +136,38 @@ def test_format_output_no_cost_latency():
 ==================================================
 URL: https://workflowai.hello/_/agents/agent-id/runs/run-id"""
 
-    assert run.format_output() == expected
+        assert run.format_output() == expected
+
+    def test_format_output_tool_call_requests(self):
+        run = Run[_TestOutput](
+            id="run-id",
+            agent_id="agent-id",
+            schema_id=1,
+            output=_TestOutput.model_construct(),
+            tool_call_requests=[
+                ToolCallRequest(
+                    id="tool-call-id",
+                    name="tool-call-name",
+                    input={"key": "value"},
+                ),
+            ],
+        )
+        assert (
+            run.format_output()
+            == """\nTool Call Requests:
+==================================================
+[
+  {
+    "id": "tool-call-id",
+    "name": "tool-call-name",
+    "input": {
+      "key": "value"
+    }
+  }
+]
+==================================================
+URL: https://workflowai.hello/_/agents/agent-id/runs/run-id"""
+        )
 
 
 class TestRunURL:
