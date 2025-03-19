@@ -129,6 +129,8 @@ class RunResponse(BaseModel):
     tool_calls: Optional[list[ToolCall]] = None
     tool_call_requests: Optional[list[ToolCallRequest]] = None
 
+    feedback_token: Optional[str] = None
+
     def to_domain(
         self,
         task_id: str,
@@ -151,6 +153,7 @@ class RunResponse(BaseModel):
             cost_usd=self.cost_usd,
             tool_calls=safe_map_list(self.tool_calls, tool_call_to_domain),
             tool_call_requests=safe_map_list(self.tool_call_requests, tool_call_request_to_domain),
+            feedback_token=self.feedback_token,
         )
 
 
