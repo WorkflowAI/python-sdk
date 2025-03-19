@@ -1,3 +1,4 @@
+import json
 from collections.abc import Iterable
 from typing import Any, Generic, Optional, Protocol
 
@@ -107,12 +108,22 @@ class Run(BaseModel, Generic[AgentOutput]):
             URL: https://workflowai.com/_/agents/agent-1/runs/test-id
         """
         # Format the output string
-        output = [
-            "\nOutput:",
-            "=" * 50,
-            self.output.model_dump_json(indent=2),
-            "=" * 50,
-        ]
+        output: list[str] = []
+        # In case of partial validation, it is possible that the output is an empty model
+        if dumped_output := self.output.model_dump():
+            output += [
+                "\nOutput:",
+                "=" * 50,
+                json.dumps(dumped_output, indent=2),
+                "=" * 50,
+            ]
+        if self.tool_call_requests:
+            output += [
+                "\nTool Call Requests:",
+                "=" * 50,
+                json.dumps(self.model_dump(include={"tool_call_requests"})["tool_call_requests"], indent=2),
+                "=" * 50,
+            ]
 
         # Add run information if available
         if self.cost_usd is not None:
