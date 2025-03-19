@@ -102,6 +102,20 @@ def agent_no_schema(api_client: APIClient):
 
 
 class TestRun:
+    def _mock_tool_call_requests(self, httpx_mock: HTTPXMock, arg: int = 1):
+        httpx_mock.add_response(
+            json={
+                "id": "run_1",
+                "tool_call_requests": [
+                    {
+                        "id": "1",
+                        "name": "some_tool",
+                        "input": {"arg": arg},
+                    },
+                ],
+            },
+        )
+
     async def test_success(self, httpx_mock: HTTPXMock, agent: Agent[HelloTaskInput, HelloTaskOutput]):
         httpx_mock.add_response(json=fixtures_json("task_run.json"))
 
@@ -429,20 +443,26 @@ class TestRun:
         httpx_mock: HTTPXMock,
         agent_with_tools: Agent[HelloTaskInput, HelloTaskOutput],
     ):
-        httpx_mock.add_response(
-            json={
-                "id": "run_1",
-                "tool_call_requests": [
-                    {
-                        "id": "1",
-                        "name": "some_tool",
-                        "input": {"arg": 1},
-                    },
-                ],
-            },
-        )
+        self._mock_tool_call_requests(httpx_mock)
         out = await agent_with_tools.run(HelloTaskInput(name="Alice"), max_turns=0, max_turns_raises=False)
         assert out.tool_call_requests == [
+            ToolCallRequest(
+                id="1",
+                name="some_tool",
+                input={"arg": 1},
+            ),
+        ]
+
+    async def test_max_turns_raises_default(
+        self,
+        httpx_mock: HTTPXMock,
+        agent_with_tools: Agent[HelloTaskInput, HelloTaskOutput],
+    ):
+        self._mock_tool_call_requests(httpx_mock)
+        agent_with_tools._other_run_params = {"max_turns": 0, "max_turns_raises": False}  # pyright: ignore [reportPrivateUsage, reportAttributeAccessIssue]
+
+        run = await agent_with_tools.run(HelloTaskInput(name="Alice"))
+        assert run.tool_call_requests == [
             ToolCallRequest(
                 id="1",
                 name="some_tool",

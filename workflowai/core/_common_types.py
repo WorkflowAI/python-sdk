@@ -40,15 +40,18 @@ class VersionRunParams(TypedDict):
     temperature: NotRequired[Optional[float]]
 
 
-class BaseRunParams(VersionRunParams):
+class OtherRunParams(TypedDict):
     use_cache: NotRequired["CacheUsage"]
-    metadata: NotRequired[Optional[dict[str, Any]]]
-    labels: NotRequired[Optional[set[str]]]
+
     max_retry_delay: NotRequired[float]
     max_retry_count: NotRequired[float]
 
     max_turns: NotRequired[int]  # 10 by default
     max_turns_raises: NotRequired[bool]  # True by default
+
+
+class BaseRunParams(VersionRunParams, OtherRunParams):
+    metadata: NotRequired[Optional[dict[str, Any]]]
 
 
 class RunParams(BaseRunParams, Generic[AgentOutput]):
