@@ -1,3 +1,4 @@
+import json
 from collections.abc import AsyncIterator
 from typing import Any
 from unittest.mock import Mock, patch
@@ -10,12 +11,13 @@ from workflowai.core.client.client import WorkflowAI
 from workflowai.core.domain.run import Run
 
 
-class TestAgentDecorator:
-    @pytest.fixture
-    def workflowai(self):
-        # using httpx_mock to make sure we don't actually call the api
-        return WorkflowAI(api_key="test")
+@pytest.fixture
+def workflowai():
+    # using httpx_mock to make sure we don't actually call the api
+    return WorkflowAI(api_key="test")
 
+
+class TestAgentDecorator:
     @pytest.fixture
     def mock_run_fn(self):
         with patch("workflowai.core.client.agent.Agent.run", autospec=True) as run_mock:
@@ -120,3 +122,24 @@ class TestAgentDecorator:
             HelloTaskOutput(message="hello"),
             HelloTaskOutput(message="hello"),
         ]
+
+
+class TestSendFeedback:
+    async def test_send_feedback(self, workflowai: WorkflowAI, httpx_mock: HTTPXMock):
+        httpx_mock.add_response(
+            url="https://api.workflowai.com/v1/feedback",
+            method="POST",
+            status_code=200,
+        )
+
+        await workflowai.send_feedback(feedback_token="bliblu", outcome="positive")
+
+        reqs = httpx_mock.get_requests()
+        assert len(reqs) == 1
+        req = reqs[0]
+        assert req.method == "POST"
+        assert req.url == "https://api.workflowai.com/v1/feedback"
+        assert json.loads(req.content) == {
+            "feedback_token": "bliblu",
+            "outcome": "positive",
+        }

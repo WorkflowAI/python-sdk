@@ -220,3 +220,10 @@ class CompletionsResponse(BaseModel):
     """Response from the completions API endpoint."""
 
     completions: list[Completion]
+
+
+class CreateFeedbackRequest(BaseModel):
+    feedback_token: str
+    outcome: Literal["positive", "negative"]
+    comment: Optional[str]
+    user_id: Optional[str]
