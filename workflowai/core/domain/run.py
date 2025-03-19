@@ -46,6 +46,8 @@ class Run(BaseModel, Generic[AgentOutput]):
         description="An error that occurred during the run. Only provided if the run failed.",
     )
 
+    feedback_token: Optional[str] = None
+
     _agent: Optional["_AgentBase[AgentOutput]"] = None
 
     def __eq__(self, other: object) -> bool:
