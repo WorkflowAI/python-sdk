@@ -21,8 +21,9 @@ from workflowai.core.client.client import (
     WorkflowAI,
 )
 from workflowai.core.domain.completion import Completion, CompletionUsage, Message
-from workflowai.core.domain.errors import WorkflowAIError
+from workflowai.core.domain.errors import MaxTurnsReachedError, WorkflowAIError
 from workflowai.core.domain.run import Run
+from workflowai.core.domain.tool_call import ToolCallRequest
 from workflowai.core.domain.version_properties import VersionProperties
 
 
@@ -50,8 +51,8 @@ def agent_with_instructions(api_client: APIClient):
 
 @pytest.fixture
 def agent_with_tools(api_client: APIClient):
-    def some_tool() -> str:
-        return "Hello, world!"
+    def some_tool(arg: int) -> str:
+        return f"Hello, world {arg}!"
 
     return Agent(
         agent_id="123",
@@ -325,6 +326,129 @@ class TestRun:
             "aliased_ser_alias": "2",
             "aliased_val": "3",
         }
+
+    async def test_run_with_tools(
+        self,
+        httpx_mock: HTTPXMock,
+        agent_with_tools: Agent[HelloTaskInput, HelloTaskOutput],
+    ):
+        httpx_mock.add_response(
+            url="http://localhost:8000/v1/_/agents/123/schemas/1/run",
+            json={
+                "id": "run_1",
+                "tool_call_requests": [
+                    {
+                        "id": "1",
+                        "name": "some_tool",
+                        "input": {"arg": 1},
+                    },
+                ],
+            },
+        )
+        httpx_mock.add_response(
+            url="http://localhost:8000/v1/_/agents/123/runs/run_1/reply",
+            json={
+                "id": "run_2",
+                "task_output": {"message": "blibli!"},
+            },
+        )
+
+        out = await agent_with_tools.run(HelloTaskInput(name="Alice"))
+        assert out.output.message == "blibli!"
+
+        reply_req = httpx_mock.get_request(url="http://localhost:8000/v1/_/agents/123/runs/run_1/reply")
+        assert reply_req
+        assert json.loads(reply_req.content)["tool_results"] == [
+            {
+                "id": "1",
+                "output": "Hello, world 1!",
+            },
+        ]
+
+    async def test_max_turns_default(
+        self,
+        httpx_mock: HTTPXMock,
+        agent_with_tools: Agent[HelloTaskInput, HelloTaskOutput],
+    ):
+        for i in range(10):
+            httpx_mock.add_response(
+                json={
+                    "id": f"run_{i}",
+                    "tool_call_requests": [
+                        {
+                            "id": "1",
+                            "name": "some_tool",
+                            "input": {"arg": i},
+                        },
+                    ],
+                },
+            )
+
+        with pytest.raises(MaxTurnsReachedError) as e:
+            await agent_with_tools.run(HelloTaskInput(name="Alice"))
+
+        assert e.value.tool_call_requests == [
+            ToolCallRequest(
+                id="1",
+                name="some_tool",
+                input={"arg": 9},
+            ),
+        ]
+
+        reqs = httpx_mock.get_requests()
+        assert len(reqs) == 10
+
+    async def test_max_turns_0(self, httpx_mock: HTTPXMock, agent_with_tools: Agent[HelloTaskInput, HelloTaskOutput]):
+        httpx_mock.add_response(
+            url="http://localhost:8000/v1/_/agents/123/schemas/1/run",
+            json={
+                "id": "run_1",
+                "tool_call_requests": [
+                    {
+                        "id": "1",
+                        "name": "some_tool",
+                        "input": {"arg": 1},
+                    },
+                ],
+            },
+        )
+
+        with pytest.raises(MaxTurnsReachedError) as e:
+            await agent_with_tools.run(HelloTaskInput(name="Alice"), max_turns=0)
+
+        assert e.value.tool_call_requests == [
+            ToolCallRequest(
+                id="1",
+                name="some_tool",
+                input={"arg": 1},
+            ),
+        ]
+
+    async def test_max_turns_0_not_raises(
+        self,
+        httpx_mock: HTTPXMock,
+        agent_with_tools: Agent[HelloTaskInput, HelloTaskOutput],
+    ):
+        httpx_mock.add_response(
+            json={
+                "id": "run_1",
+                "tool_call_requests": [
+                    {
+                        "id": "1",
+                        "name": "some_tool",
+                        "input": {"arg": 1},
+                    },
+                ],
+            },
+        )
+        out = await agent_with_tools.run(HelloTaskInput(name="Alice"), max_turns=0, max_turns_raises=False)
+        assert out.tool_call_requests == [
+            ToolCallRequest(
+                id="1",
+                name="some_tool",
+                input={"arg": 1},
+            ),
+        ]
 
 
 class TestSanitizeVersion:

@@ -131,7 +131,7 @@ class _RunnableAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOu
                 milliseconds. Defaults to 60000.
             max_retry_count (Optional[float], optional): The maximum number of retry attempts.
                 Defaults to 1.
-            max_tool_iterations (Optional[int], optional): Maximum number of tool iteration cycles.
+            max_turns (Optional[int], optional): Maximum number of tool iteration cycles.
                 Defaults to 10.
             validator (Optional[OutputValidator[AgentOutput]], optional): Custom validator for the
                 output.
@@ -194,7 +194,7 @@ class _RunnableOutputOnlyAgent(Agent[AgentInput, AgentOutput], Generic[AgentInpu
                 milliseconds. Defaults to 60000.
             max_retry_count (Optional[float], optional): The maximum number of retry attempts.
                 Defaults to 1.
-            max_tool_iterations (Optional[int], optional): Maximum number of tool iteration cycles.
+            max_turns (Optional[int], optional): Maximum number of tool iteration cycles.
                 Defaults to 10.
             validator (Optional[OutputValidator[AgentOutput]], optional): Custom validator for the
                 output.
@@ -234,7 +234,7 @@ class _RunnableStreamAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, A
                 milliseconds. Defaults to 60000.
             max_retry_count (Optional[float], optional): The maximum number of retry attempts.
                 Defaults to 1.
-            max_tool_iterations (Optional[int], optional): Maximum number of tool iteration cycles.
+            max_turns (Optional[int], optional): Maximum number of tool iteration cycles.
                 Defaults to 10.
             validator (Optional[OutputValidator[AgentOutput]], optional): Custom validator for the
                 output.
@@ -276,7 +276,7 @@ class _RunnableStreamOutputOnlyAgent(Agent[AgentInput, AgentOutput], Generic[Age
                 milliseconds. Defaults to 60000.
             max_retry_count (Optional[float], optional): The maximum number of retry attempts.
                 Defaults to 1.
-            max_tool_iterations (Optional[int], optional): Maximum number of tool iteration cycles.
+            max_turns (Optional[int], optional): Maximum number of tool iteration cycles.
                 Defaults to 10.
             validator (Optional[OutputValidator[AgentOutput]], optional): Custom validator for the
                 output.

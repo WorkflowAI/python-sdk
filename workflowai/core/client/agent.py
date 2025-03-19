@@ -27,7 +27,7 @@ from workflowai.core.client._utils import (
     global_default_version_reference,
 )
 from workflowai.core.domain.completion import Completion
-from workflowai.core.domain.errors import BaseError, WorkflowAIError
+from workflowai.core.domain.errors import BaseError, MaxTurnsReachedError, WorkflowAIError
 from workflowai.core.domain.run import Run
 from workflowai.core.domain.task import AgentInput, AgentOutput
 from workflowai.core.domain.tool import Tool
@@ -83,7 +83,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
         ```
     """
 
-    _DEFAULT_MAX_ITERATIONS = 10
+    _DEFAULT_MAX_TURNS = 10
 
     def __init__(
         self,
@@ -324,8 +324,14 @@ class Agent(Generic[AgentInput, AgentOutput]):
         run = self._build_run_no_tools(chunk, schema_id, validator)
 
         if run.tool_call_requests:
-            if current_iteration >= kwargs.get("max_iterations", self._DEFAULT_MAX_ITERATIONS):
-                raise WorkflowAIError(error=BaseError(message="max tool iterations reached"), response=None)
+            if current_iteration >= kwargs.get("max_turns", self._DEFAULT_MAX_TURNS):
+                if kwargs.get("max_turns_raises", True):
+                    raise MaxTurnsReachedError(
+                        error=BaseError(message="max tool iterations reached"),
+                        response=None,
+                        tool_call_requests=run.tool_call_requests,
+                    )
+                return run
             with_reply = await self._execute_tools(
                 run_id=run.id,
                 tool_call_requests=run.tool_call_requests,
@@ -368,7 +374,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
             max_retry_delay (Optional[float], optional): The maximum delay between retries in milliseconds.
                 Defaults to 60000.
             max_retry_count (Optional[float], optional): The maximum number of retry attempts. Defaults to 1.
-            max_tool_iterations (Optional[int], optional): Maximum number of tool iteration cycles. Defaults to 10.
+            max_turns (Optional[int], optional): Maximum number of tool iteration cycles. Defaults to 10.
             validator (Optional[OutputValidator[AgentOutput]], optional): Custom validator for the output.
 
         Returns:
@@ -385,7 +391,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
                     res,
                     prepared_run.schema_id,
                     validator,
-                    current_iteration=0,
+                    current_iteration=1,
                     # TODO[test]: add test with custom validator
                     **new_kwargs,
                 )
@@ -424,7 +430,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
             max_retry_delay (Optional[float], optional): The maximum delay between retries in milliseconds.
                 Defaults to 60000.
             max_retry_count (Optional[float], optional): The maximum number of retry attempts. Defaults to 1.
-            max_tool_iterations (Optional[int], optional): Maximum number of tool iteration cycles. Defaults to 10.
+            max_turns (Optional[int], optional): Maximum number of tool iteration cycles. Defaults to 10.
             validator (Optional[OutputValidator[AgentOutput]], optional): Custom validator for the output.
 
         Returns:

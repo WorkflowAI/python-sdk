@@ -47,7 +47,8 @@ class BaseRunParams(VersionRunParams):
     max_retry_delay: NotRequired[float]
     max_retry_count: NotRequired[float]
 
-    max_tool_iterations: NotRequired[int]  # 10 by default
+    max_turns: NotRequired[int]  # 10 by default
+    max_turns_raises: NotRequired[bool]  # True by default
 
 
 class RunParams(BaseRunParams, Generic[AgentOutput]):

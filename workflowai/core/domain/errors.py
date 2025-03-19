@@ -6,6 +6,8 @@ from typing import Any, Literal, Optional, Union
 from httpx import Response
 from pydantic import BaseModel
 
+from workflowai.core.domain import tool_call
+
 ProviderErrorCode = Literal[
     # Max number of tokens were exceeded in the prompt
     "max_tokens_exceeded",
@@ -112,12 +114,14 @@ class WorkflowAIError(Exception):
         run_id: Optional[str] = None,
         retry_after_delay_seconds: Optional[float] = None,
         partial_output: Optional[dict[str, Any]] = None,
+        tool_call_requests: Optional[list["tool_call.ToolCallRequest"]] = None,
     ):
         self.error = error
         self.run_id = run_id
         self.response = response
         self._retry_after_delay_seconds = retry_after_delay_seconds
         self.partial_output = partial_output
+        self.tool_call_requests = tool_call_requests
 
     def __str__(self):
         return f"WorkflowAIError : [{self.error.code}] ({self.error.status_code}): [{self.error.message}]"
@@ -187,3 +191,6 @@ class WorkflowAIError(Exception):
 
 
 class InvalidGenerationError(WorkflowAIError): ...
+
+
+class MaxTurnsReachedError(WorkflowAIError): ...
