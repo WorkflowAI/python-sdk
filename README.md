@@ -1,7 +1,5 @@
 # Python SDK for WorkflowAI
 
-[![WorkflowAI](./examples/assets/readme-header.png)](https://workflowai.com)
-
 [![PyPI version](https://img.shields.io/pypi/v/workflowai.svg)](https://pypi.org/project/workflowai/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
