@@ -1,7 +1,5 @@
 # Python SDK for WorkflowAI
 
-[![WorkflowAI](./examples/assets/readme-header.png)](https://workflowai.com)
-
 [![PyPI version](https://img.shields.io/pypi/v/workflowai.svg)](https://pypi.org/project/workflowai/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -9,8 +7,7 @@ Official SDK from [WorkflowAI](https://workflowai.com) for Python.
 
 ## WorkflowAI
 
-[WorkflowAI](https://workflowai.com) is a low-code tool for product managers and software engineers
-that makes it easier to ship features powered by AI.
+[WorkflowAI](https://workflowai.com) is an open-source platform where product and engineering teams collaborate to build and iterate on AI features.
 
 This SDK is designed for Python teams who prefer code-first development. It provides greater control through direct code integration while still leveraging the full power of the WorkflowAI platform, complementing the web-app experience.
 
