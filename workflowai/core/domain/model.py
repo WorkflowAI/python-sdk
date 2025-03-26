@@ -130,7 +130,10 @@ class Model(str, Enum):
     # DeepSeek Models
     # --------------------------------------------------------------------------
     DEEPSEEK_V3_2412 = "deepseek-v3-2412"
+    DEEPSEEK_V3_0324 = "deepseek-v3-0324"
+    DEEPSEEK_V3_LATEST = "deepseek-v3-latest"
     DEEPSEEK_R1_2501 = "deepseek-r1-2501"
+    DEEPSEEK_R1_2501_BASIC = "deepseek-r1-2501-basic"
 
 
 ModelOrStr = Union[Model, str]
