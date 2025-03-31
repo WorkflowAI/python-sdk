@@ -35,6 +35,8 @@ This SDK is designed for Python teams who prefer code-first development. It prov
 
 - **Integrated with WorkflowAI**: The SDK seamlessly syncs with the WorkflowAI web application, giving you access to a powerful playground where you can edit prompts and compare models side-by-side. This hybrid approach combines the flexibility of code-first development with the visual tools needed for effective prompt engineering and model evaluation.
 
+- **Multimodality support**: Build agents that can handle multiple modalities, such as images, PDFs, documents, and audio. Learn more about [multimodal capabilities](https://docs.workflowai.com/python-sdk/multimodality).
+
 ## Get Started
 
 `workflowai` requires Python 3.9 or higher.
