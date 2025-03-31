@@ -29,7 +29,7 @@ This SDK is designed for Python teams who prefer code-first development. It prov
 
 - **Provider fallback**: Automatically switches to alternative AI providers when the primary provider fails, ensuring high availability and reliability for your AI applications. This feature allows you to define fallback strategies that maintain service continuity even during provider outages or rate limiting.
 
-- **Built-in tools**: Comes with powerful built-in tools like web search and web browsing capabilities, allowing your agents to access real-time information from the internet. These tools enable your AI applications to retrieve up-to-date data, research topics, and interact with web content without requiring complex integrations.
+- **Built-in tools**: Comes with powerful built-in tools like web search and web browsing capabilities, allowing your agents to access real-time information from the internet. These tools enable your AI applications to retrieve up-to-date data, research topics, and interact with web content without requiring complex integrations. Learn more about [built-in tools](https://docs.workflowai.com/python-sdk/tools).
 
 - **Custom tools support**: Easily extend your agents' capabilities by creating custom tools tailored to your specific needs. Whether you need to query internal databases, call external APIs, or perform specialized calculations, WorkflowAI's tool framework makes it simple to augment your AI with domain-specific functionality.
 
