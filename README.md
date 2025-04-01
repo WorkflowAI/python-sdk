@@ -1,3 +1,5 @@
+![header](/examples/assets/readme-header.png)
+
 # Python SDK for WorkflowAI
 
 [![PyPI version](https://img.shields.io/pypi/v/workflowai.svg)](https://pypi.org/project/workflowai/)
