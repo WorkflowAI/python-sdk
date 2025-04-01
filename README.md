@@ -16,7 +16,7 @@ This SDK is designed for Python teams who prefer code-first development. It prov
 
 - **Model-agnostic**: Works with all major AI models including OpenAI, Anthropic, Claude, Google/Gemini, Mistral, Deepseek, with a unified interface that makes switching between providers seamless. [View all supported models](https://github.com/WorkflowAI/python-sdk/blob/main/workflowai/core/domain/model.py).
 
-- **Open-source and flexible deployment**: WorkflowAI is fully open-source with flexible deployment options. Run it self-hosted on your own infrastructure for maximum data control, or use the managed WorkflowAI Cloud service for hassle-free updates and automatic scaling.
+- **Open-source and flexible deployment**: WorkflowAI is fully open-source with flexible deployment options. Run it self-hosted on your own infrastructure for maximum data control, or use the managed [WorkflowAI Cloud](https://docs.workflowai.com/workflowai-cloud/introduction) service for hassle-free updates and automatic scaling.
 
 - **Observability integrated**: Built-in monitoring and logging capabilities that provide insights into your AI workflows, making debugging and optimization straightforward. Learn more about [observability features](https://docs.workflowai.com/concepts/runs).
 
