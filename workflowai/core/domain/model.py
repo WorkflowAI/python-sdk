@@ -47,6 +47,8 @@ class Model(str, Enum):
     # --------------------------------------------------------------------------
     # Gemini Models
     # --------------------------------------------------------------------------
+    GEMINI_2_5_PRO_PREVIEW_0325 = "gemini-2.5-pro-preview-03-25"
+    GEMINI_2_5_PRO_EXP_0325 = "gemini-2.5-pro-exp-03-25"
     GEMINI_2_0_FLASH_LATEST = "gemini-2.0-flash-latest"
     GEMINI_2_0_FLASH_001 = "gemini-2.0-flash-001"
     GEMINI_2_0_FLASH_LITE_001 = "gemini-2.0-flash-lite-001"
@@ -88,6 +90,8 @@ class Model(str, Enum):
     # --------------------------------------------------------------------------
     # Llama Models
     # --------------------------------------------------------------------------
+    LLAMA_4_SCOUT_BASIC = "llama4-scout-instruct-basic"
+    LLAMA_4_MAVERICK_BASIC = "llama4-maverick-instruct-basic"
     LLAMA_3_3_70B = "llama-3.3-70b"
     LLAMA_3_2_90B = "llama-3.2-90b"
     LLAMA_3_2_11B = "llama-3.2-11b"
