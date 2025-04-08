@@ -48,6 +48,18 @@ This SDK is designed for Python teams who prefer code-first development. It prov
 pip install workflowai
 ```
 
+### API Key
+
+To get started quickly, get an API key from [WorkflowAI Cloud](https://workflowai.com/organization/settings/api-keys). For maximum control over your data, you can also use your [self-hosted instance](https://github.com/WorkflowAI/workflowai), though this requires additional setup time.
+
+Then, set the `WORKFLOWAI_API_KEY` environment variable:
+
+```sh
+export WORKFLOWAI_API_KEY="your-api-key"
+```
+
+### First Agent
+
 Here's a simple example of a WorkflowAI agent that extracts structured flight information from email content:
 
 
