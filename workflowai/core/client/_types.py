@@ -54,6 +54,9 @@ class AgentInterface(_BaseObject, Generic[AgentInputContra, AgentOutput], Protoc
     __kwdefaults__: Optional[dict[str, Any]]
     __code__: Any
 
+    @property
+    def agent_uid(self) -> int: ...
+
     async def run(
         self,
         agent_input: AgentInputContra,
