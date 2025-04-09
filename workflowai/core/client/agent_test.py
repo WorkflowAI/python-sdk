@@ -231,6 +231,7 @@ class TestRun:
             json={
                 "id": "123",
                 "schema_id": 2,
+                "uid": 123,
             },
         )
         run_response = fixtures_json("task_run.json")
@@ -241,6 +242,7 @@ class TestRun:
 
         out = await agent_no_schema.run(HelloTaskInput(name="Alice"))
         assert out.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
+        assert agent_no_schema.agent_uid == 123
 
         run_response["id"] = "8f635b73-f403-47ee-bff9-18320616c6cc"
         # Try and run again
@@ -286,7 +288,7 @@ class TestRun:
 
         agent = Agent(agent_id="123", input_cls=AliasInput, output_cls=AliasOutput, api=api_client)
 
-        httpx_mock.add_response(url="http://localhost:8000/v1/_/agents", json={"id": "123", "schema_id": 2})
+        httpx_mock.add_response(url="http://localhost:8000/v1/_/agents", json={"id": "123", "schema_id": 2, "uid": 123})
 
         httpx_mock.add_response(
             url="http://localhost:8000/v1/_/agents/123/schemas/2/run",
@@ -805,7 +807,7 @@ class TestListModels:
         # Mock the registration response
         httpx_mock.add_response(
             url="http://localhost:8000/v1/_/agents",
-            json={"id": "123", "schema_id": 2},
+            json={"id": "123", "schema_id": 2, "uid": 123},
         )
 
         # Mock the models response with the new structure
