@@ -111,6 +111,8 @@ class Agent(Generic[AgentInput, AgentOutput]):
 
         self._default_validator = default_validator(output_cls)
         self._other_run_params = kwargs
+        # The UID of the agent. Set once the agent has been registered
+        self.agent_uid: int = 0
 
     @classmethod
     def build_tools(cls, tools: Iterable[Callable[..., Any]]):
@@ -267,6 +269,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
             returns=CreateAgentResponse,
         )
         self.schema_id = res.schema_id
+        self.agent_uid = res.uid
         return res.schema_id
 
     @classmethod

@@ -34,7 +34,7 @@ class IntTestClient:
         self.httpx_mock.add_response(
             method="POST",
             url=self.REGISTER_URL,
-            json={"schema_id": schema_id, "variant_id": variant_id, "id": task_id},
+            json={"schema_id": schema_id, "variant_id": variant_id, "id": task_id, "uid": 123},
         )
 
     def mock_response(
