@@ -178,3 +178,7 @@ For advanced workflow patterns and examples, please refer to the [Workflows READ
 ## Contributing
 
 See the [CONTRIBUTING.md](./CONTRIBUTING.md) file for more details. Thank you!
+
+## Acknowledgments
+
+Thanks to [ell](https://github.com/MadcowD/ell) for the inspiration! ✨
