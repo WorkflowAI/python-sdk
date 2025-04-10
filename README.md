@@ -47,6 +47,31 @@ https://github.com/user-attachments/assets/9e1cabd1-8d1f-4cec-bad5-64871d7f033f
 
 - **Custom tools support**: Easily extend your agents' capabilities by creating custom tools tailored to your specific needs. Whether you need to query internal databases, call external APIs, or perform specialized calculations, WorkflowAI's tool framework makes it simple to augment your AI with domain-specific functionality. Learn more about [custom tools](https://docs.workflowai.com/python-sdk/tools#defining-custom-tools).
 
+```python
+# Sync tool
+def get_current_time(timezone: Annotated[str, "The timezone to get the current time in. e-g Europe/Paris"]) -> str:
+    """Return the current time in the given timezone in iso format"""
+    return datetime.now(ZoneInfo(timezone)).isoformat()
+
+# Tools can also be async
+async def get_latest_pip_version(package_name: Annotated[str, "The name of the pip package to check"]) -> str:
+    """Fetch the latest version of a pip package from PyPI"""
+    url = f"https://pypi.org/pypi/{package_name}/json"
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+        response.raise_for_status()
+        data = response.json()
+        return data['info']['version']
+
+@workflowai.agent(
+    id="research-helper",
+    tools=[get_current_time, get_latest_pip_version],
+    model=Model.GPT_4O_LATEST,
+)
+async def answer_question(_: AnswerQuestionInput) -> AnswerQuestionOutput:
+    ...
+```
+
 - **Integrated with WorkflowAI**: The SDK seamlessly syncs with the WorkflowAI web application, giving you access to a powerful playground where you can edit prompts and compare models side-by-side. This hybrid approach combines the flexibility of code-first development with the visual tools needed for effective prompt engineering and model evaluation.
 
 - **Multimodality support**: Build agents that can handle multiple modalities, such as images, PDFs, documents, and audio. Learn more about [multimodal capabilities](https://docs.workflowai.com/python-sdk/multimodality).
@@ -184,9 +209,28 @@ And the runs executed via the SDK are synced with the web application.
 
 Complete documentation is available at [docs.workflowai.com/python-sdk](https://docs.workflowai.com/python-sdk).
 
-## Example
+## Examples
 
-Examples are available in the [examples](./examples/) directory.
+- [01_basic_agent.py](./examples/01_basic_agent.py): Demonstrates basic agent creation, input/output models, and cost/latency tracking.
+- [02_agent_with_tools.py](./examples/02_agent_with_tools.py): Shows how to use hosted tools (like `@browser-text`) and custom tools with an agent.
+- [03_caching.py](./examples/03_caching.py): Illustrates different caching strategies (`auto`, `always`, `never`) for agent runs.
+- [04_audio_classifier_agent.py](./examples/04_audio_classifier_agent.py): An agent that analyzes audio files for spam/robocall detection using audio input.
+- [05_browser_text_uptime_agent.py](./examples/05_browser_text_uptime_agent.py): Uses the `@browser-text` tool to fetch and extract information from web pages.
+- [06_streaming_summary.py](./examples/06_streaming_summary.py): Demonstrates how to stream agent responses in real-time.
+- [07_image_agent.py](./examples/07_image_agent.py): An agent that analyzes images to identify cities and landmarks.
+- [08_pdf_agent.py](./examples/08_pdf_agent.py): An agent that answers questions based on the content of a PDF document.
+- [09_reply.py](./examples/09_reply.py): Shows how to use the `run.reply()` method to have a conversation with an agent, maintaining context.
+- [10_calendar_event_extraction.py](./examples/10_calendar_event_extraction.py): Extracts structured calendar event details from text or images.
+- [11_ecommerce_chatbot.py](./examples/11_ecommerce_chatbot.py): A chatbot that provides product recommendations based on user queries.
+- [12_contextual_retrieval.py](./examples/12_contextual_retrieval.py): Generates concise contextual descriptions for document chunks to improve search retrieval.
+- [13_rag.py](./examples/13_rag.py): Demonstrates a RAG (Retrieval-Augmented Generation) pattern using a search tool to answer questions based on a knowledge base.
+- [14_templated_instructions.py](./examples/14_templated_instructions.py): Uses Jinja2 templating in agent instructions to adapt behavior based on input variables.
+- [15_pii_extraction.py](./examples/15_pii_extraction.py): Extracts and redacts Personal Identifiable Information (PII) from text.
+- [15_text_to_sql.py](./examples/15_text_to_sql.py): Converts natural language questions into safe and efficient SQL queries based on a provided database schema.
+- [16_multi_model_consensus.py](./examples/16_multi_model_consensus.py): Queries multiple LLMs with the same question and uses another LLM to synthesize a combined answer.
+- [17_multi_model_consensus_with_tools.py](./examples/17_multi_model_consensus_with_tools.py): An advanced multi-model consensus agent that uses tools to dynamically decide which models to query.
+- [18_flight_info_extraction.py](./examples/18_flight_info_extraction.py): Extracts structured flight information (number, dates, times, airports) from emails.
+- [workflows/](./examples/workflows): Contains examples of different workflow patterns (chaining, routing, parallel, orchestrator-worker). See [workflows/README.md](./examples/workflows/README.md) for details.
 
 ## Workflows
 
