@@ -270,6 +270,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
         )
         self.schema_id = res.schema_id
         self.agent_uid = res.uid
+        self.tenant_uid = res.tenant_uid
         return res.schema_id
 
     @classmethod

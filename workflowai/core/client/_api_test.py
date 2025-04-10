@@ -6,84 +6,7 @@ from pydantic import BaseModel
 from pytest_httpx import HTTPXMock, IteratorStream
 
 from workflowai.core.client._api import APIClient
-from workflowai.core.domain.errors import WorkflowAIError
-
-
-class TestAPIClientExtractError:
-    def test_extract_error(self):
-        client = APIClient(url="test_url", api_key="test_api_key")
-
-        # Test valid JSON error response
-        response = httpx.Response(
-            status_code=400,
-            json={
-                "error": {
-                    "message": "Test error message",
-                    "details": {"key": "value"},
-                },
-                "id": "test_task_123",
-            },
-        )
-
-        error = client._extract_error(response, response.content)  # pyright:ignore[reportPrivateUsage]
-        assert isinstance(error, WorkflowAIError)
-        assert error.error.message == "Test error message"
-        assert error.error.details == {"key": "value"}
-        assert error.run_id == "test_task_123"
-        assert error.response == response
-
-    def test_extract_partial_output(self):
-        client = APIClient(url="test_url", api_key="test_api_key")
-
-        # Test valid JSON error response
-        response = httpx.Response(
-            status_code=400,
-            json={
-                "error": {
-                    "message": "Test error message",
-                    "details": {"key": "value"},
-                },
-                "id": "test_task_123",
-                "task_output": {"key": "value"},
-            },
-        )
-
-        error = client._extract_error(response, response.content)  # pyright:ignore[reportPrivateUsage]
-        assert isinstance(error, WorkflowAIError)
-        assert error.error.message == "Test error message"
-        assert error.error.details == {"key": "value"}
-        assert error.run_id == "test_task_123"
-        assert error.partial_output == {"key": "value"}
-        assert error.response == response
-
-    def test_extract_error_invalid_json(self):
-        client = APIClient(url="test_url", api_key="test_api_key")
-
-        # Test invalid JSON response
-        invalid_data = b"Invalid JSON data"
-        response = httpx.Response(status_code=400, content=invalid_data)
-
-        with pytest.raises(WorkflowAIError) as e:
-            client._extract_error(response, invalid_data)  # pyright:ignore[reportPrivateUsage]
-        assert isinstance(e.value, WorkflowAIError)
-        assert e.value.error.message == "Unknown error"
-        assert e.value.error.details == {"raw": "b'Invalid JSON data'"}
-        assert e.value.response == response
-
-    def test_extract_error_with_custom_error(self):
-        client = APIClient(url="test_url", api_key="test_api_key")
-
-        # Test with provided exception
-        invalid_data = "{'detail': 'Not Found'}"
-        response = httpx.Response(status_code=404, content=invalid_data)
-        exception = ValueError("Custom error")
-
-        with pytest.raises(WorkflowAIError) as e:
-            client._extract_error(response, invalid_data, exception)  # pyright:ignore[reportPrivateUsage]
-        assert isinstance(e.value, WorkflowAIError)
-        assert e.value.error.message == "Custom error"
-        assert e.value.error.details == {"raw": "{'detail': 'Not Found'}"}
-        assert e.value.response == response
+from workflowai.core.domain.errors import InvalidAPIKeyError, WorkflowAIError
 
 
 @pytest.fixture
@@ -213,3 +136,16 @@ class TestReadAndConnectError:
                 pass
 
         assert e.value.error.code == "connection_error"
+
+    async def test_empty_api_key(self, client: APIClient):
+        """Check that we return a pretty error when there is no api key provided"""
+        client.api_key = ""
+
+        # no need to add any response, httpx will complain that the header is illegal
+        with pytest.raises(InvalidAPIKeyError) as e:
+            await client.get(
+                path="test_path",
+                returns=_TestOutputModel,
+            )
+        assert e.value.error.code == "invalid_api_key"
+        assert e.value.message.startswith("❌ No API key provided")

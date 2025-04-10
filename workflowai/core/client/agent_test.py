@@ -232,6 +232,7 @@ class TestRun:
                 "id": "123",
                 "schema_id": 2,
                 "uid": 123,
+                "tenant_uid": 1234,
             },
         )
         run_response = fixtures_json("task_run.json")
@@ -243,7 +244,7 @@ class TestRun:
         out = await agent_no_schema.run(HelloTaskInput(name="Alice"))
         assert out.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
         assert agent_no_schema.agent_uid == 123
-
+        assert agent_no_schema.tenant_uid == 1234
         run_response["id"] = "8f635b73-f403-47ee-bff9-18320616c6cc"
         # Try and run again
         httpx_mock.add_response(

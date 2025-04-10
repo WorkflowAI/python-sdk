@@ -57,6 +57,9 @@ class AgentInterface(_BaseObject, Generic[AgentInputContra, AgentOutput], Protoc
     @property
     def agent_uid(self) -> int: ...
 
+    @property
+    def tenant_uid(self) -> int: ...
+
     async def run(
         self,
         agent_input: AgentInputContra,

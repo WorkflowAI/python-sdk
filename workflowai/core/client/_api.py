@@ -6,7 +6,7 @@ import httpx
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from workflowai.core._logger import logger
-from workflowai.core.domain.errors import BaseError, ErrorResponse, WorkflowAIError
+from workflowai.core.domain.errors import BaseError, InvalidAPIKeyError, WorkflowAIError
 
 # A type for return values
 _R = TypeVar("_R")
@@ -26,6 +26,11 @@ class APIClient:
 
     @asynccontextmanager
     async def _client(self, run: bool = False):
+        if not self.api_key:
+            raise InvalidAPIKeyError(
+                response=None,
+                error=BaseError(message="No API key provided", code="invalid_api_key"),
+            )
         source_headers = self.source_headers or {}
         async with httpx.AsyncClient(
             base_url=self._get_url(run),
@@ -103,26 +108,6 @@ class APIClient:
             response = await client.delete(path)
             await self.raise_for_status(response)
 
-    def _extract_error(
-        self,
-        response: httpx.Response,
-        data: Union[bytes, str],
-        exception: Optional[Exception] = None,
-    ) -> WorkflowAIError:
-        try:
-            res = ErrorResponse.model_validate_json(data)
-            return WorkflowAIError(error=res.error, run_id=res.id, response=response, partial_output=res.task_output)
-        except ValidationError:
-            raise WorkflowAIError(
-                error=BaseError(
-                    message="Unknown error" if exception is None else str(exception),
-                    details={
-                        "raw": str(data),
-                    },
-                ),
-                response=response,
-            ) from exception
-
     async def _wrap_sse(self, raw: AsyncIterator[bytes], termination_chars: bytes = b"\n\n"):
         data = b""
         in_data = False
@@ -181,7 +166,7 @@ class APIClient:
                 try:
                     yield returns.model_validate_json(chunk)
                 except ValidationError as e:
-                    raise self._extract_error(response, chunk, e) from None
+                    raise WorkflowAIError.from_response(response, chunk) from e
 
     async def raise_for_status(self, response: httpx.Response):
         if response.status_code < 200 or response.status_code >= 300:

@@ -110,7 +110,8 @@ class Run(BaseModel, Generic[AgentOutput]):
         # Format the output string
         output: list[str] = []
         # In case of partial validation, it is possible that the output is an empty model
-        if dumped_output := self.output.model_dump():
+        if dumped_output := self.output.model_dump(mode="json"):
+            # Use model_dump_json which handles datetime serialization correctly
             output += [
                 "\nOutput:",
                 "=" * 50,

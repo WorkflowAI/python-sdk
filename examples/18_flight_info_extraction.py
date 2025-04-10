@@ -19,13 +19,16 @@ from workflowai import Model
 class EmailInput(BaseModel):
     """Raw email content containing flight booking details.
     This could be a confirmation email, itinerary update, or e-ticket from any airline."""
+
     email_content: str
 
 
 class FlightInfo(BaseModel):
     """Model for extracted flight information."""
+
     class Status(str, Enum):
         """Possible statuses for a flight booking."""
+
         CONFIRMED = "Confirmed"
         PENDING = "Pending"
         CANCELLED = "Cancelled"
@@ -40,6 +43,7 @@ class FlightInfo(BaseModel):
     departure: datetime
     arrival: datetime
     status: Status
+
 
 @workflowai.agent(
     id="flight-info-extractor",

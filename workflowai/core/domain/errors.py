@@ -1,10 +1,10 @@
 from email.utils import parsedate_to_datetime
-from json import JSONDecodeError
 from time import time
 from typing import Any, Literal, Optional, Union
 
 from httpx import Response
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
+from typing_extensions import override
 
 from workflowai.core.domain import tool_call
 
@@ -79,7 +79,7 @@ ErrorCode = Union[
 
 class BaseError(BaseModel):
     details: Optional[dict[str, Any]] = None
-    message: str
+    message: str = "Unknown error"
     status_code: Optional[int] = None
     code: Optional[ErrorCode] = None
 
@@ -127,41 +127,29 @@ class WorkflowAIError(Exception):
         return f"WorkflowAIError : [{self.error.code}] ({self.error.status_code}): [{self.error.message}]"
 
     @classmethod
-    def error_cls(cls, code: str):
+    def error_cls(cls, status_code: int, code: Optional[str] = None):
+        if status_code == 401:
+            return InvalidAPIKeyError
         if code == "invalid_generation" or code == "failed_generation" or code == "agent_run_failed":
             return InvalidGenerationError
         return cls
 
     @classmethod
-    def from_response(cls, response: Response):
+    def from_response(cls, response: Response, data: Union[bytes, str, None] = None):
         try:
-            response_json = response.json()
-            r_error = response_json.get("error", {})
-            error_message = response_json.get("detail", {}) or r_error.get("message", "Unknown Error")
-            details = r_error.get("details", {})
-            error_code = r_error.get("code", "unknown_error")
-            status_code = response.status_code
-            run_id = response_json.get("id", None)
-            partial_output = response_json.get("task_output", None)
-        except JSONDecodeError:
-            error_message = "Unknown error"
-            details = {"raw": response.content.decode()}
-            error_code = "unknown_error"
-            status_code = response.status_code
-            run_id = None
-            partial_output = None
-
-        return cls.error_cls(error_code)(
-            response=response,
-            error=BaseError(
-                message=error_message,
-                details=details,
-                status_code=status_code,
-                code=error_code,
-            ),
-            run_id=run_id,
-            partial_output=partial_output,
-        )
+            res = ErrorResponse.model_validate_json(data or response.content)
+            error_cls = cls.error_cls(response.status_code, res.error.code)
+            return error_cls(error=res.error, run_id=res.id, response=response, partial_output=res.task_output)
+        except ValidationError:
+            return cls.error_cls(response.status_code)(
+                error=BaseError(
+                    message="Unknown error",
+                    details={
+                        "raw": str(data),
+                    },
+                ),
+                response=response,
+            )
 
     @property
     def retry_after_delay_seconds(self) -> Optional[float]:
@@ -194,3 +182,18 @@ class InvalidGenerationError(WorkflowAIError): ...
 
 
 class MaxTurnsReachedError(WorkflowAIError): ...
+
+
+class InvalidAPIKeyError(WorkflowAIError):
+    @property
+    @override
+    def message(self) -> str:
+        base_message = (self.status_code is None and "No API key provided") or "Your API key is invalid"
+        return (
+            f"❌ {base_message}. Please double-check your API key, "
+            "or create a new one at https://workflowai.com/organization/settings/api-keys "
+            "or from your self-hosted WorkflowAI instance."
+        )
+
+    def __str__(self) -> str:
+        return self.message
