@@ -35,7 +35,11 @@ https://github.com/user-attachments/assets/7bc99d61-5c49-4c65-9cf2-36c1c9415559
 
 - **Streaming supported**: Enables real-time streaming of AI responses for low latency applications, with immediate validation of partial outputs. Learn more about [streaming capabilities](https://docs.workflowai.com/python-sdk/agent#streaming).
 
+https://github.com/user-attachments/assets/bcb52412-4dcb-45f8-b812-4275824ed543
+
 - **Provider fallback**: Automatically switches to alternative AI providers when the primary provider fails, ensuring high availability and reliability for your AI applications. This feature allows you to define fallback strategies that maintain service continuity even during provider outages or rate limiting.
+
+![provider-fallback](https://github.com/user-attachments/assets/cc493e94-1249-4516-b8d7-b78de7d24eb3)
 
 - **Built-in tools**: Comes with powerful built-in tools like web search and web browsing capabilities, allowing your agents to access real-time information from the internet. These tools enable your AI applications to retrieve up-to-date data, research topics, and interact with web content without requiring complex integrations. Learn more about [built-in tools](https://docs.workflowai.com/python-sdk/tools).
 
