@@ -10,7 +10,7 @@ Official SDK from [WorkflowAI](https://workflowai.com) for Python.
 
 This SDK is designed for Python teams who prefer code-first development. It provides greater control through direct code integration while still leveraging the full power of the WorkflowAI platform, complementing the web-app experience.
 
-![DEMO](./examples/assets/hello-agent.mp4)
+https://github.com/user-attachments/assets/634c1100-f354-46bc-9aee-92c3f2044cd6
 
 ## Key Features
 
@@ -22,12 +22,8 @@ This SDK is designed for Python teams who prefer code-first development. It prov
 
 ```python
 class TagOutput(BaseModel):
-    positive_tags: list[str] = Field(
-        default_factory=list
-    )
-    negative_tags: list[str] = Field(
-        default_factory=list
-    )
+    positive_tags: list[str] = Field(default_factory=list)
+    negative_tags: list[str] = Field(default_factory=list)
 ```
 
 - **Observability integrated**: Built-in monitoring and logging capabilities that provide insights into your AI workflows, making debugging and optimization straightforward. Learn more about [observability features](https://docs.workflowai.com/concepts/runs).
