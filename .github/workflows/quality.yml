@@ -47,4 +47,4 @@ jobs:
           poetry install --all-extras
 
       - name: Run tests
-        run: poetry run pytest --ignore=tests/e2e
+        run: poetry run pytest --ignore=tests/e2e --ignore-glob="examples/*.py"

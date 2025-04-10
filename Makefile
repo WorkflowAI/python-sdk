@@ -26,7 +26,7 @@ lint:
 
 .PHONY: test
 test:
-	pytest --ignore=tests/e2e
+	pytest --ignore=tests/e2e --ignore-glob="examples/*.py"
 
 .PHONY: lock
 lock:
