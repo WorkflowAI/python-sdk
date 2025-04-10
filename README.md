@@ -27,11 +27,7 @@ https://github.com/user-attachments/assets/7259adee-1152-44a4-9a15-78fc0a5935e1
 
 - **Structured output**: Uses Pydantic models to validate and structure AI responses. WorkflowAI ensures your AI responses always match your defined structure, simplifying integrations, reducing parsing errors, and making your data reliable and ready for use. Learn more about [structured input and output](https://docs.workflowai.com/python-sdk/agent#schema-input-output).
 
-```python
-class TagOutput(BaseModel):
-    positive_tags: list[str] = Field(default_factory=list)
-    negative_tags: list[str] = Field(default_factory=list)
-```
+https://github.com/user-attachments/assets/0d05bf43-abdb-48fa-b96f-a6c8917c5479
 
 - **Observability integrated**: Built-in monitoring and logging capabilities that provide insights into your AI workflows, making debugging and optimization straightforward. Learn more about [observability features](https://docs.workflowai.com/concepts/runs).
 
