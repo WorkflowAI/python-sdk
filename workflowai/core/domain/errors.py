@@ -188,8 +188,9 @@ class InvalidAPIKeyError(WorkflowAIError):
     @property
     @override
     def message(self) -> str:
+        base_message = (self.status_code is None and "No API key provided") or "Your API key is invalid"
         return (
-            "❌ Your API key is invalid. Please double-check your API key, "
+            f"❌ {base_message}. Please double-check your API key, "
             "or create a new one at https://workflowai.com/organization/settings/api-keys "
             "or from your self-hosted WorkflowAI instance."
         )
