@@ -80,8 +80,12 @@ async def main():
     # Example 1: Basic usage with Paris
     print("\nExample 1: Basic usage with Paris")
     print("-" * 50)
-    run = await get_capital_info.run(CityInput(city="Paris"))
-    print(run)
+    try:
+        run = await get_capital_info.run(CityInput(city="Paris"))
+        print(run)
+    except workflowai.WorkflowAIError as e:
+        print(e)
+        return
 
     # Example 2: Using Tokyo
     print("\nExample 2: Using Tokyo")

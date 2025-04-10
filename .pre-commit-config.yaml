@@ -22,6 +22,6 @@ repos:
         types: [file, python]
       - id: pytest
         name: testing (pytest)
-        entry: pytest . --ignore tests/e2e
+        entry: make test
         language: system
         pass_filenames: false
