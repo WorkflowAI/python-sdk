@@ -10,7 +10,7 @@ Official SDK from [WorkflowAI](https://workflowai.com) for Python.
 
 This SDK is designed for Python teams who prefer code-first development. It provides greater control through direct code integration while still leveraging the full power of the WorkflowAI platform, complementing the web-app experience.
 
-Try in CursorAI:
+#### Try in CursorAI:
 ```
 install `pip workflowai` and from https://docs.workflowai.com/python-sdk/agent build an agent that...
 ```
