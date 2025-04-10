@@ -6,7 +6,7 @@ import httpx
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from workflowai.core._logger import logger
-from workflowai.core.domain.errors import BaseError, WorkflowAIError
+from workflowai.core.domain.errors import BaseError, InvalidAPIKeyError, WorkflowAIError
 
 # A type for return values
 _R = TypeVar("_R")
@@ -26,6 +26,11 @@ class APIClient:
 
     @asynccontextmanager
     async def _client(self, run: bool = False):
+        if not self.api_key:
+            raise InvalidAPIKeyError(
+                response=None,
+                error=BaseError(message="No API key provided", code="invalid_api_key"),
+            )
         source_headers = self.source_headers or {}
         async with httpx.AsyncClient(
             base_url=self._get_url(run),

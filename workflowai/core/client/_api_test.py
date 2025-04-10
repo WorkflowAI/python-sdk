@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from pytest_httpx import HTTPXMock, IteratorStream
 
 from workflowai.core.client._api import APIClient
-from workflowai.core.domain.errors import WorkflowAIError
+from workflowai.core.domain.errors import InvalidAPIKeyError, WorkflowAIError
 
 
 @pytest.fixture
@@ -136,3 +136,16 @@ class TestReadAndConnectError:
                 pass
 
         assert e.value.error.code == "connection_error"
+
+    async def test_empty_api_key(self, client: APIClient):
+        """Check that we return a pretty error when there is no api key provided"""
+        client.api_key = ""
+
+        # no need to add any response, httpx will complain that the header is illegal
+        with pytest.raises(InvalidAPIKeyError) as e:
+            await client.get(
+                path="test_path",
+                returns=_TestOutputModel,
+            )
+        assert e.value.error.code == "invalid_api_key"
+        assert e.value.message.startswith("❌ No API key provided")
