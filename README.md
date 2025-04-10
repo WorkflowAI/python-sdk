@@ -43,11 +43,15 @@ https://github.com/user-attachments/assets/bcb52412-4dcb-45f8-b812-4275824ed543
 
 - **Built-in tools**: Comes with powerful built-in tools like web search and web browsing capabilities, allowing your agents to access real-time information from the internet. These tools enable your AI applications to retrieve up-to-date data, research topics, and interact with web content without requiring complex integrations. Learn more about [built-in tools](https://docs.workflowai.com/python-sdk/tools).
 
+https://github.com/user-attachments/assets/9e1cabd1-8d1f-4cec-bad5-64871d7f033f
+
 - **Custom tools support**: Easily extend your agents' capabilities by creating custom tools tailored to your specific needs. Whether you need to query internal databases, call external APIs, or perform specialized calculations, WorkflowAI's tool framework makes it simple to augment your AI with domain-specific functionality. Learn more about [custom tools](https://docs.workflowai.com/python-sdk/tools#defining-custom-tools).
 
 - **Integrated with WorkflowAI**: The SDK seamlessly syncs with the WorkflowAI web application, giving you access to a powerful playground where you can edit prompts and compare models side-by-side. This hybrid approach combines the flexibility of code-first development with the visual tools needed for effective prompt engineering and model evaluation.
 
 - **Multimodality support**: Build agents that can handle multiple modalities, such as images, PDFs, documents, and audio. Learn more about [multimodal capabilities](https://docs.workflowai.com/python-sdk/multimodality).
+
+https://github.com/user-attachments/assets/65d0f34e-2bb7-42bf-ab5c-be1cca96a2c6
 
 - **Caching support**: To save money and improve latency, WorkflowAI supports caching. When enabled, identical requests return cached results instead of making new API calls to AI providers. Learn more about [caching capabilities](https://docs.workflowai.com/python-sdk/agent#cache).
 
