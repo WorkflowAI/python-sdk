@@ -244,6 +244,16 @@ For advanced workflow patterns and examples, please refer to the [Workflows READ
 - [chain_of_agents.py](./examples/workflows/chain_of_agents.py): Processes long documents sequentially across multiple agents, passing findings along the chain.
 - [agent_delegation.py](./examples/workflows/agent_delegation.py): Enables dynamic workflows where one agent invokes other agents through tools based on the task.
 
+## Cursor Integration
+
+Building agents is even easier with Cursor by adding WorkflowAI docs as a documentation source:
+1. In Cursor chat, type `@docs`.
+2. Select "+ Add new doc" (at the bottom of the list).
+3. Add `https://docs.workflowai.com/` as a documentation source.
+4. Save the settings.
+
+Now, Cursor will have access to the WorkflowAI docs.
+
 ## Contributing
 
 See the [CONTRIBUTING.md](./CONTRIBUTING.md) file for more details. Thank you!
