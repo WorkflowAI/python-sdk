@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
 import pytest
@@ -14,6 +15,11 @@ from workflowai.core.domain.version_properties import VersionProperties
 
 
 class _TestOutput(BaseModel):
+    message: str
+
+
+class _TestOutputWithDatetime(BaseModel):
+    timestamp: datetime
     message: str
 
 
@@ -168,6 +174,29 @@ URL: https://workflowai.hello/_/agents/agent-id/runs/run-id"""
 ==================================================
 URL: https://workflowai.hello/_/agents/agent-id/runs/run-id"""
         )
+
+    def test_format_output_with_datetime(self):
+        """Test that datetimes in the output model are correctly serialized to ISO strings."""
+        test_dt = datetime(2024, 1, 1, 12, 30, 0, tzinfo=timezone.utc)
+        run = Run[_TestOutputWithDatetime](
+            id="run-dt-id",
+            agent_id="agent-dt-id",
+            schema_id=2,
+            output=_TestOutputWithDatetime(timestamp=test_dt, message="datetime test"),
+            duration_seconds=0.5,
+            cost_usd=0.0001,
+        )
+
+        expected_json_part = '{\n  "timestamp": "2024-01-01T12:30:00Z",\n  "message": "datetime test"\n}'
+        expected = f"""\nOutput:
+==================================================
+{expected_json_part}
+==================================================
+Cost: $ 0.00010
+Latency: 0.50s
+URL: https://workflowai.hello/_/agents/agent-dt-id/runs/run-dt-id"""
+
+        assert run.format_output() == expected
 
 
 class TestRunURL:
