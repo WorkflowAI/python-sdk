@@ -167,6 +167,7 @@ class CreateAgentResponse(BaseModel):
     id: str
     schema_id: int
     uid: int = 0
+    tenant_uid: int = 0
 
 
 class ModelMetadata(BaseModel):
