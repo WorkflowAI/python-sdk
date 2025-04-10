@@ -236,6 +236,14 @@ Complete documentation is available at [docs.workflowai.com/python-sdk](https://
 
 For advanced workflow patterns and examples, please refer to the [Workflows README](examples/workflows/README.md) for more details.
 
+- [chain.py](./examples/workflows/chain.py): Sequential processing where tasks execute in a fixed sequence, ideal for linear processes.
+- [routing.py](./examples/workflows/routing.py): Directs work based on intermediate results to specialized agents, adapting behavior based on context.
+- [parallel_processing.py](./examples/workflows/parallel_processing.py): Splits work into independent subtasks that run concurrently for faster processing.
+- [orchestrator_worker.py](./examples/workflows/orchestrator_worker.py): An orchestrator plans work, and multiple worker agents execute parts in parallel.
+- [evaluator_optimizer.py](./examples/workflows/evaluator_optimizer.py): Employs an iterative feedback loop to evaluate and refine output quality.
+- [chain_of_agents.py](./examples/workflows/chain_of_agents.py): Processes long documents sequentially across multiple agents, passing findings along the chain.
+- [agent_delegation.py](./examples/workflows/agent_delegation.py): Enables dynamic workflows where one agent invokes other agents through tools based on the task.
+
 ## Contributing
 
 See the [CONTRIBUTING.md](./CONTRIBUTING.md) file for more details. Thank you!
