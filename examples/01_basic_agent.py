@@ -20,15 +20,17 @@ from workflowai import Model, Run
 class CityInput(BaseModel):
     """Input model for the city-to-capital agent."""
 
-    city: str = Field(
-        description="The name of the city for which to find the country's capital",
-        examples=["Paris", "New York", "Tokyo"],
-    )
+    # For simple input fields like 'city', descriptions and examples add token overhead
+    # without providing additional context that a modern LLM wouldn't already understand.
+    # Input fields never need examples since an actual value will be provided at runtime.
+    city: str = Field()
 
 
 class CapitalOutput(BaseModel):
     """Output model containing information about the capital city."""
 
+    # Fields like country, capital, etc. are self-explanatory to LLMs
+    # Omitting descriptions and examples for these would reduce token usage
     country: str = Field(
         description="The country where the input city is located",
         examples=["France", "United States", "Japan"],
@@ -45,7 +47,7 @@ class CapitalOutput(BaseModel):
 
 @workflowai.agent(
     id="city-to-capital",
-    model=Model.CLAUDE_3_5_SONNET_LATEST,
+    model=Model.CLAUDE_3_7_SONNET_LATEST,
 )
 async def get_capital_info(city_input: CityInput) -> Run[CapitalOutput]:
     """

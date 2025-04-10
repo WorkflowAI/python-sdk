@@ -10,19 +10,27 @@ Official SDK from [WorkflowAI](https://workflowai.com) for Python.
 
 This SDK is designed for Python teams who prefer code-first development. It provides greater control through direct code integration while still leveraging the full power of the WorkflowAI platform, complementing the web-app experience.
 
+![DEMO](./examples/assets/hello-agent.mp4)
+
 ## Key Features
 
 - **Model-agnostic**: Works with all major AI models including OpenAI, Anthropic, Claude, Google/Gemini, Mistral, Deepseek, with a unified interface that makes switching between providers seamless. [View all supported models](https://github.com/WorkflowAI/python-sdk/blob/main/workflowai/core/domain/model.py).
 
 - **Open-source and flexible deployment**: WorkflowAI is fully open-source with flexible deployment options. Run it self-hosted on your own infrastructure for maximum data control, or use the managed [WorkflowAI Cloud](https://docs.workflowai.com/workflowai-cloud/introduction) service for hassle-free updates and automatic scaling.
 
-- **Observability integrated**: Built-in monitoring and logging capabilities that provide insights into your AI workflows, making debugging and optimization straightforward. Learn more about [observability features](https://docs.workflowai.com/concepts/runs).
-
-- **Cost tracking**: Automatically calculates and tracks the cost of each AI model run, providing transparency and helping you manage your AI budget effectively. Learn more about [cost tracking](https://docs.workflowai.com/python-sdk/agent#cost-latency).
-
-- **Type-safe**: Leverages Python's type system to catch errors at development time rather than runtime, ensuring more reliable AI applications.
-
 - **Structured output**: Uses Pydantic models to validate and structure AI responses. WorkflowAI ensures your AI responses always match your defined structure, simplifying integrations, reducing parsing errors, and making your data reliable and ready for use. Learn more about [structured input and output](https://docs.workflowai.com/python-sdk/agent#schema-input-output).
+
+```python
+class TagOutput(BaseModel):
+    positive_tags: list[str] = Field(
+        default_factory=list
+    )
+    negative_tags: list[str] = Field(
+        default_factory=list
+    )
+```
+
+- **Observability integrated**: Built-in monitoring and logging capabilities that provide insights into your AI workflows, making debugging and optimization straightforward. Learn more about [observability features](https://docs.workflowai.com/concepts/runs).
 
 - **Streaming supported**: Enables real-time streaming of AI responses for low latency applications, with immediate validation of partial outputs. Learn more about [streaming capabilities](https://docs.workflowai.com/python-sdk/agent#streaming).
 
@@ -38,7 +46,7 @@ This SDK is designed for Python teams who prefer code-first development. It prov
 
 - **Caching support**: To save money and improve latency, WorkflowAI supports caching. When enabled, identical requests return cached results instead of making new API calls to AI providers. Learn more about [caching capabilities](https://docs.workflowai.com/python-sdk/agent#cache).
 
-
+- **Cost tracking**: Automatically calculates and tracks the cost of each AI model run, providing transparency and helping you manage your AI budget effectively. Learn more about [cost tracking](https://docs.workflowai.com/python-sdk/agent#cost-latency).
 
 ## Get Started
 
