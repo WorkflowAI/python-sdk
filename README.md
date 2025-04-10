@@ -31,6 +31,8 @@ https://github.com/user-attachments/assets/0d05bf43-abdb-48fa-b96f-a6c8917c5479
 
 - **Observability integrated**: Built-in monitoring and logging capabilities that provide insights into your AI workflows, making debugging and optimization straightforward. Learn more about [observability features](https://docs.workflowai.com/concepts/runs).
 
+https://github.com/user-attachments/assets/7bc99d61-5c49-4c65-9cf2-36c1c9415559
+
 - **Streaming supported**: Enables real-time streaming of AI responses for low latency applications, with immediate validation of partial outputs. Learn more about [streaming capabilities](https://docs.workflowai.com/python-sdk/agent#streaming).
 
 - **Provider fallback**: Automatically switches to alternative AI providers when the primary provider fails, ensuring high availability and reliability for your AI applications. This feature allows you to define fallback strategies that maintain service continuity even during provider outages or rate limiting.
