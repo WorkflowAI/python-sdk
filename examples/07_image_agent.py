@@ -78,7 +78,7 @@ async def main():
     image = Image(url=image_url)
     agent_run = await identify_city_from_image.run(
         ImageInput(image=image),
-    ) 
+    )
 
     print("\n--------\nAgent output:\n", agent_run.output, "\n--------\n")
     print(f"Cost: ${agent_run.cost_usd:.10f}")
