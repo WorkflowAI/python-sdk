@@ -74,11 +74,11 @@ async def main():
     print(f"Latency: {agent_run.duration_seconds:.2f}s")
 
     # Example using URL for Image
-    image_url = "https://t4.ftcdn.net/jpg/02/96/15/35/360_F_296153501_B34baBHDkFXbl5RmzxpiOumF4LHGCvAE.jpg"
+    image_url = "https://workflowai.blob.core.windows.net/workflowai-public/fixtures/paris.jpg"
     image = Image(url=image_url)
     agent_run = await identify_city_from_image.run(
         ImageInput(image=image),
-    )
+    ) 
 
     print("\n--------\nAgent output:\n", agent_run.output, "\n--------\n")
     print(f"Cost: ${agent_run.cost_usd:.10f}")
