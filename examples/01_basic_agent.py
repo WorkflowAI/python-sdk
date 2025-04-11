@@ -90,10 +90,10 @@ async def main():
         return
 
     # Example 2: Using Tokyo
-    print("\nExample 2: Using Tokyo")
-    print("-" * 50)
-    run = await get_capital_info.run(CityInput(city="Tokyo"))
-    print(run)
+    # print("\nExample 2: Using Tokyo")
+    # print("-" * 50)
+    # run = await get_capital_info.run(CityInput(city="Tokyo"))
+    # print(run)
 
     # Fetch and display completions for the Tokyo example
     await display_completions(run)

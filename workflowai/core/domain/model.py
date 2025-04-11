@@ -139,5 +139,15 @@ class Model(str, Enum):
     DEEPSEEK_R1_2501 = "deepseek-r1-2501"
     DEEPSEEK_R1_2501_BASIC = "deepseek-r1-2501-basic"
 
+    # --------------------------------------------------------------------------
+    # XAI Models
+    # --------------------------------------------------------------------------
+    GROK_3_BETA = "grok-3-beta"
+    GROK_3_FAST_BETA = "grok-3-fast-beta"
+    GROK_3_MINI_BETA_LOW_REASONING_EFFORT = "grok-3-mini-beta-low"
+    GROK_3_MINI_BETA_HIGH_REASONING_EFFORT = "grok-3-mini-beta-high"
+    GROK_3_MINI_FAST_BETA_LOW_REASONING_EFFORT = "grok-3-mini-fast-beta-low"
+    GROK_3_MINI_FAST_BETA_HIGH_REASONING_EFFORT = "grok-3-mini-fast-beta-high"
+
 
 ModelOrStr = Union[Model, str]

@@ -1,0 +1,36 @@
+{
+  "completions": [
+    {
+      "messages": [
+        {
+          "role": "assistant",
+          "content": [
+            {
+              "type": "text",
+              "text": "<instructions>\\nFind the capital city of the country where the input city is located.\\n\\nGuidelines:\\n1. First identify the country where the input city is located\\n2. Then provide the capital city of that country\\n3. Include an interesting historical or cultural fact about the capital\\n4. Be accurate and precise with geographical information\\n5. If the input city is itself the capital, still provide the information\\n</instructions>\\n\\nInput will be provided in the user message using a JSON following the schema:\\n```json\\n{\\n  \"description\": \"Input model for the city-to-capital agent.\",\\n  \"properties\": {\\n    \"city\": {\\n      \"description\": \"The name of the city for which to find the country\\'s capital\",\\n      \"examples\": [\\n        \"Paris\",\\n        \"New York\",\\n        \"Tokyo\"\\n      ],\\n      \"type\": \"string\"\\n    }\\n  },\\n  \"required\": [\\n    \"city\"\\n  ],\\n  \"type\": \"object\"\\n}\\n```\\n\\nReturn a single JSON object enforcing the following schema:\\n```json\\n{\\n  \"description\": \"Output model containing information about the capital city.\",\\n  \"properties\": {\\n    \"country\": {\\n      \"description\": \"The country where the input city is located\",\\n      \"examples\": [\\n        \"France\",\\n        \"United States\",\\n        \"Japan\"\\n      ],\\n      \"type\": \"string\"\\n    },\\n    \"capital\": {\\n      \"description\": \"The capital city of the country\",\\n      \"examples\": [\\n        \"Paris\",\\n        \"Washington D.C.\",\\n        \"Tokyo\"\\n      ],\\n      \"type\": \"string\"\\n    },\\n    \"fun_fact\": {\\n      \"description\": \"An interesting fact about the capital city\",\\n      \"examples\": [\\n        \"Paris has been the capital of France since 508 CE\"\\n      ],\\n      \"type\": \"string\"\\n    }\\n  },\\n  \"required\": [\\n    \"capital\",\\n    \"country\",\\n    \"fun_fact\"\\n  ],\\n  \"type\": \"object\"\\n}\\n```"
+            }
+          ]
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "Input is:\\n```json\\n{\\n  \"city\": \"Paris\"\\n}\\n```"
+            }
+          ]
+        }
+      ],
+      "response": "{\\n  \"country\": \"France\",\\n  \"capital\": \"Paris\",\\n  \"fun_fact\": \"Paris became the capital of France in 508 CE when Clovis I, the first King of the Franks, made the city his seat of power. It\\'s one of the oldest capital cities in Europe and was originally called Lutetia during the Roman period.\"\\n}",
+      "usage": {
+        "completion_token_count": 88,
+        "completion_cost_usd": 0.00132,
+        "prompt_token_count": 516,
+        "prompt_cost_usd": 0.0015480000000000001,
+        "model_context_window_size": 200000
+      },
+      "duration_seconds": 4.13,
+      "provider": "anthropic"
+    }
+  ]
+}
