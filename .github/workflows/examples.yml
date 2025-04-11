@@ -27,16 +27,7 @@ jobs:
         run: poetry install --all-extras
 
       - name: Run all example scripts
-        run: |
-          # Find all Python files in examples directory
-          find examples -name "*.py" -type f | while read -r script; do
-            echo "Running example: $script"
-            poetry run python "$script"
-            if [ $? -ne 0 ]; then
-              echo "Error: Failed to run $script"
-              exit 1
-            fi
-          done
+        run: ARGS="-vv" make test.examples
         env:
           WORKFLOWAI_API_KEY: ${{ secrets.WORKFLOWAI_TEST_API_KEY }}
 
