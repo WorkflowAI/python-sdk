@@ -12,14 +12,14 @@ This SDK is designed for Python teams who prefer code-first development. It prov
 
 #### Try in CursorAI:
 ```
-install `pip workflowai` and from https://docs.workflowai.com/python-sdk/agent build an agent that...
+install `pip workflowai` and from https://docs.workflowai.com/python-sdk/agent build an agent that [add description of the agent you want to build]
 ```
 
 https://github.com/user-attachments/assets/634c1100-f354-46bc-9aee-92c3f2044cd6
 
 ## Key Features
 
-- **Model-agnostic**: Works with all major AI models including OpenAI, Anthropic, Claude, Google/Gemini, Mistral, Deepseek, with a unified interface that makes switching between providers seamless. [View all supported models](https://github.com/WorkflowAI/python-sdk/blob/main/workflowai/core/domain/model.py).
+- **Model-agnostic**: Works with all major AI models including OpenAI, Anthropic, Claude, Google/Gemini, Mistral, DeepSeek, Grok with a unified interface that makes switching between providers seamless. [View all supported models](https://github.com/WorkflowAI/python-sdk/blob/main/workflowai/core/domain/model.py).
 
 https://github.com/user-attachments/assets/7259adee-1152-44a4-9a15-78fc0a5935e1
 
@@ -41,7 +41,7 @@ https://github.com/user-attachments/assets/bcb52412-4dcb-45f8-b812-4275824ed543
 
 ![provider-fallback](https://github.com/user-attachments/assets/cc493e94-1249-4516-b8d7-b78de7d24eb3)
 
-- **Built-in tools**: Comes with powerful built-in tools like web search and web browsing capabilities, allowing your agents to access real-time information from the internet. These tools enable your AI applications to retrieve up-to-date data, research topics, and interact with web content without requiring complex integrations. Learn more about [built-in tools](https://docs.workflowai.com/python-sdk/tools).
+- **Hosted tools**: Comes with powerful hosted tools like web search and web browsing capabilities, allowing your agents to access real-time information from the internet. These tools enable your AI applications to retrieve up-to-date data, research topics, and interact with web content without requiring complex integrations. Learn more about [hosted tools](https://docs.workflowai.com/python-sdk/tools#hosted-tools).
 
 https://github.com/user-attachments/assets/9e1cabd1-8d1f-4cec-bad5-64871d7f033f
 
