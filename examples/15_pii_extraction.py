@@ -73,7 +73,7 @@ class PIIOutput(BaseModel):
 
 @workflowai.agent(
     id="pii-extractor",
-    model=Model.CLAUDE_3_5_SONNET_LATEST,
+    model=Model.LLAMA_4_SCOUT_BASIC,
 )
 async def extract_pii(input_data: PIIInput) -> PIIOutput:
     """
