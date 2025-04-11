@@ -20,7 +20,7 @@ from workflowai.core.client.agent import Agent
 from workflowai.core.client.client import (
     WorkflowAI,
 )
-from workflowai.core.domain.completion import Completion, CompletionUsage, Message
+from workflowai.core.domain.completion import Completion, CompletionUsage, Message, TextContent
 from workflowai.core.domain.errors import MaxTurnsReachedError, WorkflowAIError
 from workflowai.core.domain.run import Run
 from workflowai.core.domain.tool_call import ToolCallRequest
@@ -1130,6 +1130,24 @@ class TestFetchCompletions:
                 ),
             ),
         ]
+
+    async def test_fetch_completions_content_list(
+        self,
+        agent: Agent[HelloTaskInput, HelloTaskOutput],
+        httpx_mock: HTTPXMock,
+    ):
+        """Test that fetch_completions correctly fetches and returns completions
+        when the message content is a list of objects"""
+        # Mock the HTTP response instead of the API client method
+        httpx_mock.add_response(
+            url="http://localhost:8000/v1/_/agents/123/runs/1/completions",
+            json=fixtures_json("completions2.json"),
+        )
+
+        completions = await agent.fetch_completions("1")
+        assert len(completions) == 1
+        assert isinstance(completions[0].messages[0].content, list)
+        assert isinstance(completions[0].messages[0].content[0], TextContent)
 
 
 class TestStream:

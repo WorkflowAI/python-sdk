@@ -17,70 +17,74 @@ class TestMessage:
         json_str = """
         {
             "role": "assistant",
-            "content": {
+            "content": [{
                 "type": "text",
                 "text": "This is a test message"
-            }
+            }]
         }
         """
         message = Message.model_validate_json(json_str)
         assert message.role == "assistant"
-        assert isinstance(message.content, TextContent)
-        assert message.content.text == "This is a test message"
+        assert isinstance(message.content, list)
+        assert isinstance(message.content[0], TextContent)
+        assert message.content[0].text == "This is a test message"
 
     def test_with_document_content(self):
         # Test message with DocumentContent
         json_str = """
         {
             "role": "user",
-            "content": {
+            "content": [{
                 "type": "document_url",
                 "source": {
                     "url": "https://example.com/doc.pdf"
                 }
-            }
+            }]
         }
         """
         message = Message.model_validate_json(json_str)
         assert message.role == "user"
-        assert isinstance(message.content, DocumentContent)
-        assert message.content.source.url == "https://example.com/doc.pdf"
+        assert isinstance(message.content, list)
+        assert isinstance(message.content[0], DocumentContent)
+        assert message.content[0].source.url == "https://example.com/doc.pdf"
 
     def test_with_image_content(self):
         # Test message with ImageContent
         json_str = """
         {
             "role": "user",
-            "content": {
+            "content": [{
                 "type": "image_url",
                 "image_url": {
                     "url": "https://example.com/image.jpg"
                 }
-            }
+            }]
         }
         """
         message = Message.model_validate_json(json_str)
         assert message.role == "user"
-        assert isinstance(message.content, ImageContent)
-        assert message.content.image_url.url == "https://example.com/image.jpg"
+        assert isinstance(message.content, list)
+        assert isinstance(message.content[0], ImageContent)
+        assert message.content[0].image_url.url == "https://example.com/image.jpg"
 
     def test_with_audio_content(self):
         # Test message with AudioContent
         json_str = """
         {
             "role": "user",
-            "content": {
+            "content": [{
                 "type": "audio_url",
                 "audio_url": {
                     "url": "https://example.com/audio.mp3"
                 }
-            }
+            }]
         }
         """
         message = Message.model_validate_json(json_str)
         assert message.role == "user"
-        assert isinstance(message.content, AudioContent)
-        assert message.content.audio_url.url == "https://example.com/audio.mp3"
+        assert isinstance(message.content, list)
+        assert isinstance(message.content[0], AudioContent)
+        assert message.content[0].audio_url.url == "https://example.com/audio.mp3"
 
     def test_empty_role(self):
         # Test message with empty role
