@@ -25,7 +25,7 @@ https://github.com/user-attachments/assets/7259adee-1152-44a4-9a15-78fc0a5935e1
 
 - **Open-source and flexible deployment**: WorkflowAI is fully open-source with flexible deployment options. Run it self-hosted on your own infrastructure for maximum data control, or use the managed [WorkflowAI Cloud](https://docs.workflowai.com/workflowai-cloud/introduction) service for hassle-free updates and automatic scaling.
 
-- **Structured output**: Uses Pydantic models to validate and structure AI responses. WorkflowAI ensures your AI responses always match your defined structure, simplifying integrations, reducing parsing errors, and making your data reliable and ready for use. Learn more about [structured input and output](https://docs.workflowai.com/python-sdk/agent#schema-input-output).
+- **Structured output**: Uses Pydantic models to validate and structure AI responses. WorkflowAI ensures your AI responses always match your defined structure, simplifying integrations, reducing parsing errors, and making your data reliable and ready to use. Learn more about [structured input and output](https://docs.workflowai.com/python-sdk/agent#schema-input-output).
 
 https://github.com/user-attachments/assets/0d05bf43-abdb-48fa-b96f-a6c8917c5479
 
