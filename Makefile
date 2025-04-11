@@ -31,3 +31,6 @@ test:
 .PHONY: lock
 lock:
 	poetry lock --no-update
+
+test.examples:
+	poetry run pytest examples -n=5 ${ARGS}

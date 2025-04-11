@@ -73,7 +73,7 @@ class Message(BaseModel):
     """A message in a completion."""
 
     role: str = ""
-    content: Union[str, MessageContent] = Field(default="")
+    content: Union[str, list[MessageContent]] = Field(default="")
 
 
 class Completion(BaseModel):
