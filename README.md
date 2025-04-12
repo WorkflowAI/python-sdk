@@ -5,6 +5,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/workflowai.svg)](https://pypi.org/project/workflowai/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python versions](https://img.shields.io/pypi/pyversions/workflowai.svg)](https://pypi.org/project/workflowai/)
+[![Examples](https://github.com/WorkflowAI/python-sdk/actions/workflows/examples.yml/badge.svg)](https://github.com/WorkflowAI/python-sdk/actions/workflows/examples.yml)
 
 Official SDK from [WorkflowAI](https://workflowai.com) for Python.
 
