@@ -111,6 +111,28 @@ https://github.com/user-attachments/assets/65d0f34e-2bb7-42bf-ab5c-be1cca96a2c6
 
 - **Cost tracking**: Automatically calculates and tracks the cost of each AI model run, providing transparency and helping you manage your AI budget effectively. Learn more about [cost tracking](https://docs.workflowai.com/python-sdk/agent#cost-latency).
 
+```python
+class AnswerQuestionInput(BaseModel):
+    question: str
+
+class AnswerQuestionOutput(BaseModel):
+    answer: str
+
+@workflowai.agent(id="answer-question")
+async def answer_question(input: AnswerQuestionInput) -> AnswerQuestionOutput:
+    """
+    Answer a question.
+    """
+    ...
+
+run = await answer_question.run(AnswerQuestionInput(question="What is the history of Paris?"))
+print(f"Cost: $ {run.cost_usd:.5f}")
+print(f"Latency: {run.duration_seconds:.2f}s")
+
+# Cost: $ 0.00745
+# Latency: 8.99s
+```
+
 ## Get Started
 
 `workflowai` requires Python 3.9 or higher.
