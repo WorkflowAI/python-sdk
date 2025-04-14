@@ -36,6 +36,34 @@ https://github.com/user-attachments/assets/7bc99d61-5c49-4c65-9cf2-36c1c9415559
 
 - **Streaming supported**: Enables real-time streaming of AI responses for low latency applications, with immediate validation of partial outputs. Learn more about [streaming capabilities](https://docs.workflowai.com/python-sdk/agent#streaming).
 
+```python
+class ProductInput(BaseModel):
+    description: str = Field()
+
+class Category(str, enum.Enum):
+    ELECTRONICS = "Electronics"
+    CLOTHING = "Clothing"
+    HOME_GOODS = "Home Goods"
+    BEAUTY = "Beauty"
+    SPORTS = "Sports"
+
+class ProductAnalysisOutput(BaseModel):
+    tags: list[str] = Field(default_factory=list)
+    summary: str = Field()
+    category: Category = Field()
+
+@workflowai.agent(id="product-tagger", model=Model.DEEPSEEK_V3_LATEST)
+async def product_analyzer(input: ProductInput) -> ProductAnalysisOutput:
+    """
+    Analyze a product description.
+    """
+
+async for chunk in product_analyzer.stream(ProductInput(description="....")):
+    # chunk is a partial ProductAnalysisOutput object. Fields are progressively
+    # filled, but the object structure respects the type hint even when incomplete.
+    print(chunk.output)
+```
+
 https://github.com/user-attachments/assets/bcb52412-4dcb-45f8-b812-4275824ed543
 
 - **Provider fallback**: Automatically switches to alternative AI providers when the primary provider fails, ensuring high availability and reliability for your AI applications. This feature allows you to define fallback strategies that maintain service continuity even during provider outages or rate limiting.
