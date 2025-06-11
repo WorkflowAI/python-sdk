@@ -28,6 +28,8 @@ class RunRequest(BaseModel):
 
     use_cache: Optional[CacheUsage] = None
 
+    use_fallback: Optional[Union[Literal["auto", "never"], list[str]]] = None
+
     metadata: Optional[dict[str, Any]] = None
 
     labels: Optional[set[str]] = None  # deprecated, to be included in metadata

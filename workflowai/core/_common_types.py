@@ -2,9 +2,11 @@ from typing import (
     Annotated,
     Any,
     Generic,
+    Literal,
     Optional,
     Protocol,
     TypeVar,
+    Union,
 )
 
 from pydantic import BaseModel
@@ -42,6 +44,7 @@ class VersionRunParams(TypedDict):
 
 class OtherRunParams(TypedDict):
     use_cache: NotRequired["CacheUsage"]
+    use_fallback: NotRequired[Union[Literal["auto", "never"], list[str]]]
 
     max_retry_delay: NotRequired[float]
     max_retry_count: NotRequired[float]

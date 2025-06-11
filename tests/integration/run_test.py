@@ -38,6 +38,22 @@ async def test_run_task_run(test_client: IntTestClient) -> None:
     test_client.check_request()
 
 
+async def test_run_task_run_with_fallback(test_client: IntTestClient) -> None:
+    @workflowai.agent(schema_id=1)
+    async def city_to_capital(task_input: CityToCapitalTaskInput) -> Run[CityToCapitalTaskOutput]: ...
+
+    test_client.mock_response()
+
+    task_input = CityToCapitalTaskInput(city="Hello")
+    with_run = await city_to_capital(task_input, use_fallback="never")
+
+    assert with_run.id == "123"
+    assert with_run.output.capital == "Tokyo"
+
+    body = test_client.check_request()
+    assert body["use_fallback"] == "never"
+
+
 async def test_run_task_run_version(test_client: IntTestClient) -> None:
     @workflowai.agent(schema_id=1, version="staging")
     async def city_to_capital(task_input: CityToCapitalTaskInput) -> Run[CityToCapitalTaskOutput]: ...
