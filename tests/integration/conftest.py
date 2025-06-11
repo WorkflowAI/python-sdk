@@ -121,6 +121,8 @@ class IntTestClient:
         assert request.headers["x-workflowai-source"] == "sdk"
         assert request.headers["x-workflowai-language"] == "python"
 
+        return body
+
 
 @pytest.fixture
 def test_client(httpx_mock: HTTPXMock) -> IntTestClient:
