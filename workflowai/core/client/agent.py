@@ -209,6 +209,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
             version=version,
             stream=stream,
             use_cache=self._get_run_param("use_cache", kwargs),
+            use_fallback=self._get_run_param("use_fallback", kwargs),
             metadata=kwargs.get("metadata"),
         )
 
